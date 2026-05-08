@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block page_title %}Manage Flights{% endblock %}
+
+{% block content %}
+<div class="glass-panel">
+    <div class="widget-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Flight Records</h2>
+        <a href="/upload" class="btn primary-btn"><i class="fa-solid fa-plus"></i> New Upload</a>
+    </div>
+    
+    <div class="results-table-container">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Flight ID</th>
+                    <th>Image Count</th>
+                    <th>Date Uploaded</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="flights-body">
+                <tr><td colspan="4" class="text-center text-muted">Loading flights...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="glass-panel" style="width: 400px; max-width: 90%; background: #fff; padding: 1.5rem; border-radius: var(--radius);">
+        <h3 style="margin-bottom: 1rem;">Rename Flight</h3>
+        <div class="form-group">
+            <label>Current Flight ID</label>
+            <input type="text" id="old-flight-id" class="premium-input" disabled style="background: #f3f4f6; color: #6b7280;">
+        </div>
+        <div class="form-group">
+            <label>New Flight ID</label>
+            <input type="text" id="new-flight-id" class="premium-input" placeholder="Enter new ID">
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button class="btn primary-btn" onclick="closeEditModal()">Cancel</button>
+            <button class="btn success-btn" id="save-rename-btn">Save Changes</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentFlights = [];
+    
+    document.addEventListener("DOMContentLoaded", loadFlights);
+    
+    function loadFlights() {
+        fetch('/api/flights')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('flights-body');
+                tbody.innerHTML = '';
+                
+                if (data.flights.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No flights recorded yet.</td></tr>';
+                    return;
+                }
+                
+                data.flights.forEach(f => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold flight-tag">${f.flight_id}</td>
+                        <td>${f.image_count} images</td>
+                        <td class="text-muted">${f.upload_date}</td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                <a href="/upload?flight_id=${f.flight_id}" class="btn primary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: var(--success);" title="Add More Images">
+                                    <i class="fa-solid fa-plus"></i>
+                                </a>
+                                <a href="/results?flight_id=${f.flight_id}" class="btn primary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" title="View Results">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <button onclick="openEditModal('${f.flight_id}')" class="btn primary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: var(--primary);" title="Rename Flight">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="deleteFlight('${f.flight_id}')" class="btn primary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: var(--danger);" title="Delete Flight">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+    
+    function openEditModal(flightId) {
+        document.getElementById('old-flight-id').value = flightId;
+        document.getElementById('new-flight-id').value = flightId;
+        const modal = document.getElementById('edit-modal');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+    
+    function closeEditModal() {
+        const modal = document.getElementById('edit-modal');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+    
+    document.getElementById('save-rename-btn').addEventListener('click', () => {
+        const oldId = document.getElementById('old-flight-id').value;
+        const newId = document.getElementById('new-flight-id').value;
+        
+        if (!newId || oldId === newId) {
+            closeEditModal();
+            return;
+        }
+        
+        const btn = document.getElementById('save-rename-btn');
+        btn.disabled = true;
+        
+        fetch(`/api/flights/${oldId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_flight_id: newId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            closeEditModal();
+            loadFlights();
+        })
+        .catch(err => {
+            btn.disabled = false;
+            alert('Error renaming flight');
+        });
+    });
+    
+    function deleteFlight(flightId) {
+        if (!confirm(`Are you sure you want to delete flight '${flightId}'? This will permanently delete all associated image results.`)) {
+            return;
+        }
+        
+        fetch(`/api/flights/${flightId}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            loadFlights();
+        })
+        .catch(err => {
+            alert('Error deleting flight');
+        });
+    }
+</script>
+{% endblock %}

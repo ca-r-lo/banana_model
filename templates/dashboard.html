@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Stat Cards -->
+    <div class="stat-card glass-panel">
+        <div class="stat-icon blue"><i class="fa-solid fa-images"></i></div>
+        <div class="stat-details">
+            <h3>Total Analyzed</h3>
+            <div class="stat-value" id="stat-total">--</div>
+        </div>
+    </div>
+    
+    <div class="stat-card glass-panel">
+        <div class="stat-icon green"><i class="fa-solid fa-seedling"></i></div>
+        <div class="stat-details">
+            <h3>Healthy Plants</h3>
+            <div class="stat-value" id="stat-healthy">--</div>
+        </div>
+    </div>
+    
+    <div class="stat-card glass-panel">
+        <div class="stat-icon red"><i class="fa-solid fa-disease"></i></div>
+        <div class="stat-details">
+            <h3>Diseased Samples</h3>
+            <div class="stat-value" id="stat-diseased">--</div>
+        </div>
+    </div>
+    
+    <div class="stat-card glass-panel">
+        <div class="stat-icon orange"><i class="fa-solid fa-bullseye"></i></div>
+        <div class="stat-details">
+            <h3>Avg Confidence</h3>
+            <div class="stat-value" id="stat-confidence">--%</div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="main-widget glass-panel">
+        <div class="widget-header">
+            <h2>Recent Flights</h2>
+        </div>
+        <div class="widget-body" id="recent-flights">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </div>
+    
+    <div class="side-widget glass-panel">
+        <div class="widget-header">
+            <h2>Most Detected</h2>
+        </div>
+        <div class="widget-body alert-box">
+            <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+            <h3 id="stat-most-detected">--</h3>
+            <p>Immediate action recommended in affected areas.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        fetch('/api/stats')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('stat-total').textContent = data.total;
+                document.getElementById('stat-healthy').textContent = data.healthy;
+                document.getElementById('stat-diseased').textContent = data.diseased;
+                document.getElementById('stat-confidence').textContent = data.avg_confidence + '%';
+                document.getElementById('stat-most-detected').textContent = data.most_detected;
+                
+                const flightsContainer = document.getElementById('recent-flights');
+                if (data.recent_flights && data.recent_flights.length > 0) {
+                    let html = '<ul class="flight-list">';
+                    data.recent_flights.forEach(f => {
+                        html += `<li><i class="fa-solid fa-plane-up"></i> <a href="/results?flight_id=${f}">${f}</a></li>`;
+                    });
+                    html += '</ul>';
+                    flightsContainer.innerHTML = html;
+                } else {
+                    flightsContainer.innerHTML = '<p class="text-muted">No flights recorded yet.</p>';
+                }
+            })
+            .catch(err => console.error(err));
+    });
+</script>
+{% endblock %}

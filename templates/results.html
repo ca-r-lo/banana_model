@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block page_title %}Classification Results{% endblock %}
+
+{% block content %}
+<div class="results-controls glass-panel">
+    <div class="filter-group">
+        <label>Filter by Flight:</label>
+        <select id="flight-filter" class="premium-input">
+            <option value="">All Flights</option>
+            <!-- Filled by JS -->
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status:</label>
+        <select id="status-filter" class="premium-input">
+            <option value="">All</option>
+            <option value="Healthy">Healthy</option>
+            <option value="Diseased">Diseased</option>
+        </select>
+    </div>
+</div>
+
+<div class="results-table-container glass-panel">
+    <table class="premium-table">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Flight ID</th>
+                <th>Prediction</th>
+                <th>Confidence</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="results-body">
+            <tr>
+                <td colspan="6" class="text-center text-muted">Loading results...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const flightIdParam = urlParams.get('flight_id');
+        
+        let allResults = [];
+        
+        fetch('/api/results')
+            .then(res => res.json())
+            .then(data => {
+                allResults = data.results;
+                
+                // Populate flight filter
+                const flights = [...new Set(allResults.map(item => item.flight_id))];
+                const flightSelect = document.getElementById('flight-filter');
+                flights.forEach(f => {
+                    const option = document.createElement('option');
+                    option.value = f;
+                    option.textContent = f;
+                    if(f === flightIdParam) option.selected = true;
+                    flightSelect.appendChild(option);
+                });
+                
+                renderTable();
+            });
+            
+        document.getElementById('flight-filter').addEventListener('change', renderTable);
+        document.getElementById('status-filter').addEventListener('change', renderTable);
+        
+        function renderTable() {
+            const flightFilter = document.getElementById('flight-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+            
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '';
+            
+            const filtered = allResults.filter(item => {
+                if(flightFilter && item.flight_id !== flightFilter) return false;
+                if(statusFilter && item.status !== statusFilter) return false;
+                return true;
+            });
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No results found.</td></tr>';
+                return;
+            }
+            
+            filtered.forEach(item => {
+                const tr = document.createElement('tr');
+                const confColor = item.confidence > 0.85 ? 'text-green' : (item.confidence > 0.6 ? 'text-orange' : 'text-red');
+                const statusBadge = item.status === 'Healthy' ? '<span class="badge badge-green">Healthy</span>' : '<span class="badge badge-red">Diseased</span>';
+                
+                tr.innerHTML = `
+                    <td>
+                        <div class="img-preview" style="cursor: pointer;" onclick="openImageViewer('/static/uploads/${item.filename}')" title="Click to view full image">
+                            <img src="/static/uploads/${item.filename}" alt="Image" loading="lazy">
+                            <span class="img-name">${item.filename}</span>
+                        </div>
+                    </td>
+                    <td><span class="flight-tag">${item.flight_id}</span></td>
+                    <td class="fw-bold">${item.prediction}</td>
+                    <td class="fw-bold ${confColor}">${(item.confidence * 100).toFixed(1)}%</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-muted">${item.date_uploaded}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    });
+</script>
+{% endblock %}

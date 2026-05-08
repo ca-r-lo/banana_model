@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banana Disease Classification AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="logo-box">
+                    <i class="fa-solid fa-leaf logo-icon"></i>
+                </div>
+                <h2>AgriVision</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span>
+                </a>
+                <a href="/upload" class="nav-link {% if request.path == '/upload' %}active{% endif %}">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> <span>Upload Images</span>
+                </a>
+                <a href="/flights" class="nav-link {% if request.path == '/flights' %}active{% endif %}">
+                    <i class="fa-solid fa-plane-departure"></i> <span>Manage Flights</span>
+                </a>
+                <a href="/results" class="nav-link {% if request.path == '/results' %}active{% endif %}">
+                    <i class="fa-solid fa-images"></i> <span>Flight Results</span>
+                </a>
+                <a href="/summary" class="nav-link {% if request.path == '/summary' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-column"></i> <span>Disease Summary</span>
+                </a>
+                <a href="/testing" class="nav-link {% if request.path == '/testing' %}active{% endif %}">
+                    <i class="fa-solid fa-vial"></i> <span>Model Testing</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot"></span> Server Online
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar glass-panel">
+                <div class="page-title">
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                <div class="user-profile">
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                </div>
+            </header>
+            
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    
+    <!-- Global Image Viewer Modal -->
+    <div id="image-viewer-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 9999;">
+        <button onclick="closeImageViewer()" style="position: absolute; top: 1.5rem; right: 2rem; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img id="image-viewer-img" src="" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+    </div>
+    
+    <script>
+        function openImageViewer(src) {
+            document.getElementById('image-viewer-img').src = src;
+            const modal = document.getElementById('image-viewer-modal');
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+        function closeImageViewer() {
+            const modal = document.getElementById('image-viewer-modal');
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            document.getElementById('image-viewer-img').src = '';
+        }
+        
+        // Close if clicking outside the image
+        document.getElementById('image-viewer-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageViewer();
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

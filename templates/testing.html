@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block page_title %}Model Evaluation{% endblock %}
+
+{% block content %}
+<div class="testing-container glass-panel">
+    <div class="widget-header">
+        <h2>Run Accuracy Test</h2>
+        <p class="text-muted">Upload a batch of images that you KNOW belong to a specific disease class to verify the model's accuracy.</p>
+    </div>
+    
+    <div class="test-form">
+        <div class="form-group">
+            <label>True Disease Label:</label>
+            <select id="test-label" class="premium-input">
+                {% for cls in classes %}
+                <option value="{{ cls }}">{{ cls }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Test Images:</label>
+            <input type="file" id="test-files" multiple accept="image/*" class="premium-input file-input">
+        </div>
+        
+        <button id="run-test-btn" class="btn primary-btn"><i class="fa-solid fa-vial"></i> Run Evaluation</button>
+    </div>
+    
+    <div id="test-loading" class="hidden text-center margin-top">
+        <i class="fa-solid fa-circle-notch fa-spin fa-2x text-blue"></i>
+        <p>Evaluating model...</p>
+    </div>
+    
+    <div id="test-results" class="hidden margin-top">
+        <div class="results-summary flex-row">
+            <div class="stat-box">
+                <h4>Total Tested</h4>
+                <div id="tr-total" class="h2">--</div>
+            </div>
+            <div class="stat-box success">
+                <h4>Correct</h4>
+                <div id="tr-correct" class="h2">--</div>
+            </div>
+            <div class="stat-box danger">
+                <h4>Incorrect</h4>
+                <div id="tr-wrong" class="h2">--</div>
+            </div>
+            <div class="stat-box highlight">
+                <h4>Accuracy</h4>
+                <div id="tr-accuracy" class="h2">--%</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('run-test-btn').addEventListener('click', () => {
+        const files = document.getElementById('test-files').files;
+        const label = document.getElementById('test-label').value;
+        
+        if(files.length === 0) {
+            alert("Please select images to test.");
+            return;
+        }
+        
+        const btn = document.getElementById('run-test-btn');
+        btn.disabled = true;
+        document.getElementById('test-loading').classList.remove('hidden');
+        document.getElementById('test-results').classList.add('hidden');
+        
+        const formData = new FormData();
+        formData.append('expected_label', label);
+        for(let i=0; i<files.length; i++){
+            formData.append('images', files[i]);
+        }
+        
+        fetch('/api/bulk_test', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            document.getElementById('test-loading').classList.add('hidden');
+            document.getElementById('test-results').classList.remove('hidden');
+            
+            document.getElementById('tr-total').textContent = data.total;
+            document.getElementById('tr-correct').textContent = data.correct;
+            document.getElementById('tr-wrong').textContent = data.wrong;
+            document.getElementById('tr-accuracy').textContent = data.accuracy.toFixed(1) + '%';
+        })
+        .catch(err => {
+            btn.disabled = false;
+            document.getElementById('test-loading').classList.add('hidden');
+            alert("Error running evaluation");
+            console.error(err);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block page_title %}Upload Flight Data{% endblock %}
+
+{% block content %}
+<div class="upload-container glass-panel">
+    <div class="upload-header">
+        <h2>Bulk Image Upload</h2>
+        <p>Select images captured by the ESP32-CAM from the SD card.</p>
+    </div>
+    
+    <div class="upload-form">
+        <div class="form-group">
+            <label for="flight_id">Flight ID / Location Name</label>
+            <input type="text" id="flight_id" placeholder="e.g., flight_001_north_field" class="premium-input" value="{{ request.args.get('flight_id', '') }}">
+        </div>
+        
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-content">
+                <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                <h3>Drag & Drop Images Here</h3>
+                <p>or</p>
+                <label for="file-input" class="btn primary-btn">Browse Files</label>
+                <input type="file" id="file-input" multiple accept="image/jpeg, image/png, image/jpg" hidden>
+            </div>
+        </div>
+        
+        <div class="selected-files" id="selected-files">
+            <!-- File items will appear here -->
+        </div>
+        
+        <div class="upload-actions">
+            <button id="upload-btn" class="btn success-btn" disabled>
+                <i class="fa-solid fa-play"></i> Start Processing
+            </button>
+        </div>
+    </div>
+    
+    <div class="upload-progress hidden" id="upload-progress">
+        <h3>Processing Images...</h3>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <p id="progress-text">0 / 0 Completed</p>
+    </div>
+    
+    <div id="review-section" class="hidden margin-top">
+        <div class="upload-header">
+            <h2>Review Pre-Classification</h2>
+            <p>Our filter categorized the uploaded images. Review and move images between lists if the pre-filter made a mistake. Click an image to move it.</p>
+        </div>
+        
+        <div class="review-grid">
+            <div class="review-column">
+                <h3><i class="fa-solid fa-check text-green"></i> Valid Leaves <span class="badge badge-green" id="count-valid">0</span></h3>
+                <div class="thumbnail-grid" id="grid-valid"></div>
+            </div>
+            
+            <div class="review-column">
+                <h3><i class="fa-solid fa-xmark text-red"></i> Non-Leaves <span class="badge badge-red" id="count-invalid">0</span></h3>
+                <div class="thumbnail-grid" id="grid-invalid"></div>
+            </div>
+        </div>
+        
+        <div class="upload-actions margin-top">
+            <button id="analyze-btn" class="btn success-btn">
+                <i class="fa-solid fa-microscope"></i> Confirm & Run AI Analysis
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
