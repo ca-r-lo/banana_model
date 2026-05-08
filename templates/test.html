@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulk Model Testing</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <div class="logo">T</div>
+      <div>
+        <h1>Bulk Model Testing</h1>
+        <p>Accuracy measurement page</p>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="/">Analyze</a>
+      <a class="active" href="/test">Bulk Test</a>
+    </div>
+  </nav>
+
+  <main class="layout single">
+    <section class="panel">
+      <span class="tag">Testing Mode</span>
+      <h2>Upload multiple images with the same expected class</h2>
+      <p>
+        Select the true class, upload bulk images, then calculate model accuracy and prediction distribution.
+      </p>
+
+      <div class="form-grid">
+        <div>
+          <label>Expected class</label>
+          <select id="expectedLabel">
+            {% for class_name in classes %}
+              <option value="{{ class_name }}">{{ class_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label>Bulk images</label>
+          <input type="file" id="bulkImages" accept="image/*" multiple />
+        </div>
+      </div>
+
+      <button onclick="runBulkTest()">Run Bulk Test</button>
+    </section>
+
+    <section id="summaryPanel" class="panel hidden">
+      <h2>Accuracy Summary</h2>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <p>Total Images</p>
+          <h3 id="totalImages">0</h3>
+        </div>
+
+        <div class="stat-card success">
+          <p>Correct</p>
+          <h3 id="correctImages">0</h3>
+        </div>
+
+        <div class="stat-card danger">
+          <p>Wrong</p>
+          <h3 id="wrongImages">0</h3>
+        </div>
+
+        <div class="stat-card highlight">
+          <p>Accuracy</p>
+          <h3 id="accuracyValue">0%</h3>
+        </div>
+      </div>
+
+      <h3>Prediction Distribution</h3>
+      <div id="classSummary" class="scores"></div>
+    </section>
+
+    <section id="tablePanel" class="panel hidden">
+      <h2>Image Results</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Expected</th>
+              <th>Predicted</th>
+              <th>Confidence</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="loadingOverlay" class="overlay hidden">
+    <div class="loader-card">
+      <div class="spinner"></div>
+      <p>Testing images...</p>
+    </div>
+  </div>
+
+  <script>
+    async function runBulkTest() {
+      const expectedLabel = document.getElementById("expectedLabel").value;
+      const files = document.getElementById("bulkImages").files;
+
+      if (!files.length) {
+        alert("Please upload images first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("expected_label", expectedLabel);
+
+      for (const file of files) {
+        formData.append("images", file);
+      }
+
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+
+      const response = await fetch("/bulk-test", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      document.getElementById("loadingOverlay").classList.add("hidden");
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      document.getElementById("summaryPanel").classList.remove("hidden");
+      document.getElementById("tablePanel").classList.remove("hidden");
+
+      document.getElementById("totalImages").textContent = data.total;
+      document.getElementById("correctImages").textContent = data.correct;
+      document.getElementById("wrongImages").textContent = data.wrong;
+      document.getElementById("accuracyValue").textContent =
+        (data.accuracy * 100).toFixed(2) + "%";
+
+      renderClassSummary(data.class_summary, data.total);
+      renderTable(data.results);
+    }
+
+    function renderClassSummary(summary, total) {
+      const target = document.getElementById("classSummary");
+      target.innerHTML = "";
+
+      Object.keys(summary).forEach(label => {
+        const count = summary[label].predicted_count;
+        const percent = total > 0 ? (count / total) * 100 : 0;
+
+        const row = document.createElement("div");
+        row.className = "score-row";
+
+        row.innerHTML = `
+          <div class="score-label">
+            <span>${label}</span>
+            <span>${count} image(s), ${percent.toFixed(2)}%</span>
+          </div>
+          <div class="bar">
+            <div class="bar-fill" style="width: ${percent}%"></div>
+          </div>
+        `;
+
+        target.appendChild(row);
+      });
+    }
+
+    function renderTable(results) {
+      const tbody = document.getElementById("resultsTable");
+      tbody.innerHTML = "";
+
+      results.forEach(item => {
+        const row = document.createElement("tr");
+        row.className = item.correct ? "row-correct" : "row-wrong";
+
+        row.innerHTML = `
+          <td>${item.filename}</td>
+          <td>${item.expected}</td>
+          <td>${item.prediction}</td>
+          <td>${(item.confidence * 100).toFixed(2)}%</td>
+          <td>${item.correct ? "Correct" : "Wrong"}</td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>

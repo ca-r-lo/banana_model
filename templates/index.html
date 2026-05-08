@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Banana Disease Identifier</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div>
+        <h1>Banana Disease Identifier</h1>
+        <p>Single-image diagnosis</p>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a class="active" href="/">Analyze</a>
+      <a href="/test">Bulk Test</a>
+    </div>
+  </nav>
+
+  <main class="layout">
+    <section class="panel hero-panel">
+      <span class="tag">AI Plant Health Tool</span>
+      <h2>Analyze banana leaf disease from an image</h2>
+      <p>
+        Upload one banana leaf image and let the model classify it into one of the trained disease categories.
+      </p>
+
+      <div class="upload-card">
+        <input type="file" id="imageInput" accept="image/*" />
+        <button onclick="analyzeImage()">Analyze Image</button>
+      </div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="image-box">
+        <img id="preview" alt="Image preview" />
+        <span id="emptyState">Image preview will appear here</span>
+      </div>
+
+      <div id="loading" class="loading hidden">Analyzing image...</div>
+
+      <div id="result" class="result hidden">
+        <p class="label-small">Prediction</p>
+        <h2 id="predictionText"></h2>
+        <p id="confidenceText" class="confidence"></p>
+
+        <div id="scores" class="scores"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const imageInput = document.getElementById("imageInput");
+    const preview = document.getElementById("preview");
+    const emptyState = document.getElementById("emptyState");
+
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        emptyState.style.display = "none";
+      }
+    });
+
+    async function analyzeImage() {
+      const file = imageInput.files[0];
+
+      if (!file) {
+        alert("Please upload an image first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      document.getElementById("loading").classList.remove("hidden");
+      document.getElementById("result").classList.add("hidden");
+
+      const response = await fetch("/predict", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      document.getElementById("loading").classList.add("hidden");
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      document.getElementById("result").classList.remove("hidden");
+
+      document.getElementById("predictionText").textContent = data.prediction;
+      document.getElementById("confidenceText").textContent =
+        "Confidence: " + (data.confidence * 100).toFixed(2) + "%";
+
+      renderScores(data.scores, "scores");
+    }
+
+    function renderScores(scores, targetId) {
+      const scoresDiv = document.getElementById(targetId);
+      scoresDiv.innerHTML = "";
+
+      scores.forEach(item => {
+        const percent = item.score * 100;
+
+        const row = document.createElement("div");
+        row.className = "score-row";
+
+        row.innerHTML = `
+          <div class="score-label">
+            <span>${item.label}</span>
+            <span>${percent.toFixed(2)}%</span>
+          </div>
+          <div class="bar">
+            <div class="bar-fill" style="width: ${percent}%"></div>
+          </div>
+        `;
+
+        scoresDiv.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>

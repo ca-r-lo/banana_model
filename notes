@@ -1,0 +1,9 @@
+CLASS_NAMES = [
+    "Black Sigatoka",
+    "BBMV",
+    "Healthy",
+    "Banana Insect Pest",
+    "Moko Disease",
+    "Fusarium Wilt",
+    "Yellow Sigatoka"
+]
