@@ -30,6 +30,7 @@
                 <th>Prediction</th>
                 <th>Confidence</th>
                 <th>Status</th>
+                <th>Temp/Hum</th>
                 <th>Date</th>
             </tr>
         </thead>
@@ -86,7 +87,7 @@
             });
             
             if(filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No results found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No results found.</td></tr>';
                 return;
             }
             
@@ -95,18 +96,25 @@
                 const confColor = item.confidence > 0.85 ? 'text-green' : (item.confidence > 0.6 ? 'text-orange' : 'text-red');
                 const statusBadge = item.status === 'Healthy' ? '<span class="badge badge-green">Healthy</span>' : '<span class="badge badge-red">Diseased</span>';
                 
+                let sensorData = '<span class="text-muted">N/A</span>';
+                if(item.temperature !== null && item.humidity !== null && item.temperature !== undefined) {
+                    sensorData = `<span style="color: #ff7e67;"><i class="fas fa-thermometer-half"></i> ${item.temperature}°C</span><br>
+                                  <span style="color: #6fb1fc;"><i class="fas fa-tint"></i> ${item.humidity}%</span>`;
+                }
+                
                 tr.innerHTML = `
-                    <td>
+                    <td data-label="Image">
                         <div class="img-preview" style="cursor: pointer;" onclick="openImageViewer('/static/uploads/${item.filename}')" title="Click to view full image">
                             <img src="/static/uploads/${item.filename}" alt="Image" loading="lazy">
-                            <span class="img-name">${item.filename}</span>
+                            <span class="img-name" style="word-break: break-all; max-width: 150px;">${item.filename}</span>
                         </div>
                     </td>
-                    <td><span class="flight-tag">${item.flight_id}</span></td>
-                    <td class="fw-bold">${item.prediction}</td>
-                    <td class="fw-bold ${confColor}">${(item.confidence * 100).toFixed(1)}%</td>
-                    <td>${statusBadge}</td>
-                    <td class="text-muted">${item.date_uploaded}</td>
+                    <td data-label="Flight ID"><span class="flight-tag">${item.flight_id}</span></td>
+                    <td data-label="Prediction" class="fw-bold">${item.prediction}</td>
+                    <td data-label="Confidence" class="fw-bold ${confColor}">${(item.confidence * 100).toFixed(1)}%</td>
+                    <td data-label="Status">${statusBadge}</td>
+                    <td data-label="Temp/Hum">${sensorData}</td>
+                    <td data-label="Date" class="text-muted">${item.date_uploaded}</td>
                 `;
                 tbody.appendChild(tr);
             });

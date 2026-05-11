@@ -108,13 +108,40 @@ def init_db():
             prediction TEXT,
             confidence REAL,
             status TEXT,
-            date_uploaded TEXT
+            date_uploaded TEXT,
+            temperature REAL,
+            humidity REAL
         )
     ''')
+    
+    # Safely try to add columns if updating from an older DB schema
+    try:
+        conn.execute("ALTER TABLE results ADD COLUMN temperature REAL")
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        conn.execute("ALTER TABLE results ADD COLUMN humidity REAL")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
 init_db()
+
+def parse_metadata_from_filename(filename):
+    import re
+    temp, hum = None, None
+    # Matches patterns like _T31p4C_H78p2RH
+    match = re.search(r'_T([\d]+p[\d]+)C_H([\d]+p[\d]+)RH', filename)
+    if match:
+        try:
+            temp = float(match.group(1).replace('p', '.'))
+            hum = float(match.group(2).replace('p', '.'))
+        except ValueError:
+            pass
+    return temp, hum
 
 # --- ROUTES ---
 @app.route("/")
@@ -195,11 +222,12 @@ def api_analyze():
                 image_bytes = f.read()
                 
             pred_result = run_prediction(image_bytes)
+            temp, hum = parse_metadata_from_filename(filename)
             
             conn.execute('''
-                INSERT INTO results (filename, flight_id, prediction, confidence, status, date_uploaded)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (filename, flight_id, pred_result["prediction"], pred_result["confidence"], pred_result["status"], upload_date))
+                INSERT INTO results (filename, flight_id, prediction, confidence, status, date_uploaded, temperature, humidity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (filename, flight_id, pred_result["prediction"], pred_result["confidence"], pred_result["status"], upload_date, temp, hum))
             analyzed_count += 1
             
     conn.commit()

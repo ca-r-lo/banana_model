@@ -2,6 +2,34 @@
 #include "FS.h"
 #include "SD_MMC.h"
 
+#include <DHT.h>
+
+#define DHTPIN 13       // DHT sensor pin
+#define DHTTYPE DHT11   // DHT11 or DHT22
+
+DHT dht(DHTPIN, DHTTYPE);
+
+volatile float currentTemp = 0.0;
+volatile float currentHum = 0.0;
+
+void dhtReadTask(void * parameter) {
+  for(;;) {
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+    
+    if (isnan(h) || isnan(t)) {
+      Serial.println("DHT read failed");
+      currentTemp = 0.0;
+      currentHum = 0.0;
+    } else {
+      currentTemp = t;
+      currentHum = h;
+    }
+    
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+}
+
 // CAMERA_MODEL_AI_THINKER pin definition
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
@@ -25,6 +53,7 @@
 int flightNumber = 1;
 String flightFolderName = "";
 int imageCount = 1;
+bool sd_ok = false;
 
 void setup() {
   Serial.begin(115200);
@@ -34,38 +63,49 @@ void setup() {
   pinMode(FLASH_LED_PIN, OUTPUT);
   digitalWrite(FLASH_LED_PIN, LOW); // Turn off initially
 
+  // Important: Explicitly pull up SD card pins to prevent 0x107 timeout in 1-bit mode
+  pinMode(13, INPUT_PULLUP); // DAT3 / CS must be HIGH to prevent entering SPI mode
+  pinMode(15, INPUT_PULLUP); // CMD
+  pinMode(14, INPUT_PULLUP); // CLK
+  pinMode(2,  INPUT_PULLUP); // DAT0
+  
+  delay(500); // Give the SD card some time to power stabilize
+
   // Initialize SD Card
   Serial.println("Mounting SD Card...");
-  if(!SD_MMC.begin()){
-    Serial.println("SD Card Mount Failed. Please check the SD card module and formatting.");
-    return;
-  }
-  
-  uint8_t cardType = SD_MMC.cardType();
-  if(cardType == CARD_NONE){
-    Serial.println("No SD Card attached");
-    return;
-  }
-  
-  // Find highest flight folder and create new one
-  // Starts checking from flight_001 upwards
-  flightNumber = 1;
-  while (true) {
-    flightFolderName = "/flight_";
-    if (flightNumber < 100) flightFolderName += "0";
-    if (flightNumber < 10) flightFolderName += "0";
-    flightFolderName += String(flightNumber);
-    
-    if (!SD_MMC.exists(flightFolderName)) {
-      break; // Found an available folder name
+  if(!SD_MMC.begin("/sdcard", true)){
+    Serial.println("SD Card Mount Failed! Images will not be saved.");
+    sd_ok = false;
+  } else {
+    sd_ok = true;
+    uint8_t cardType = SD_MMC.cardType();
+    if(cardType == CARD_NONE){
+      Serial.println("No SD Card attached");
+      sd_ok = false;
     }
-    flightNumber++;
   }
   
-  Serial.printf("Creating directory: %s\n", flightFolderName.c_str());
-  if (!SD_MMC.mkdir(flightFolderName)) {
-    Serial.println("Failed to create directory!");
-    return;
+  if (sd_ok) {
+    // Find highest flight folder and create new one
+    // Starts checking from FLIGHT001 upwards
+    flightNumber = 1;
+    while (true) {
+      flightFolderName = "/FLIGHT";
+      if (flightNumber < 100) flightFolderName += "0";
+      if (flightNumber < 10) flightFolderName += "0";
+      flightFolderName += String(flightNumber);
+      
+      if (!SD_MMC.exists(flightFolderName)) {
+        break; // Found an available folder name
+      }
+      flightNumber++;
+    }
+    
+    Serial.printf("Creating directory: %s\n", flightFolderName.c_str());
+    if (!SD_MMC.mkdir(flightFolderName)) {
+      Serial.println("Failed to create directory!");
+      sd_ok = false;
+    }
   }
 
   // Camera configuration
@@ -115,10 +155,23 @@ void setup() {
   // Warm up camera (drop first few frames which can be distorted)
   sensor_t * s = esp_camera_sensor_get();
   // Adjust orientation if needed (depends on how it's mounted on drone)
-  // s->set_vflip(s, 1);
-  // s->set_hmirror(s, 1);
+  s->set_vflip(s, 1);
+  s->set_hmirror(s, 1); // vflip + hmirror = 180 degree rotation
 
   delay(2000);
+
+  // --- SYSTEM DIAGNOSTICS ---
+  Serial.println("\n--- SYSTEM DIAGNOSTICS ---");
+  Serial.println(err == ESP_OK ? "[OK] Camera Initialized" : "[FAIL] Camera Error");
+  Serial.println(sd_ok ? "[OK] SD Card Mounted" : "[FAIL] SD Card Error");
+  Serial.println("--------------------------\n");
+
+  // Initialize DHT sensor AFTER SD card and Camera are fully initialized
+  dht.begin();
+  
+  // Start DHT task on Core 0 to prevent blocking Camera DMA on Core 1
+  xTaskCreatePinnedToCore(dhtReadTask, "DHT_Task", 4096, NULL, 1, NULL, 0);
+
   Serial.println("System Ready. Starting Capture Loop.");
 }
 
@@ -131,25 +184,43 @@ void loop() {
     return;
   }
 
-  // Construct filename (e.g., /flight_001/img_0001.jpg)
-  String imgFileName = flightFolderName + "/img_";
+  // Read temperature and humidity from the background task
+  float t = currentTemp;
+  float h = currentHum;
+
+  if (t == 0.0 && h == 0.0) {
+    Serial.println("Waiting for valid DHT reading...");
+  }
+
+  // Format sensor strings (replace '.' with 'p')
+  String tempString = String(t, 1);
+  tempString.replace(".", "p");
+  String humString = String(h, 1);
+  humString.replace(".", "p");
+
+  // Construct filename (e.g., /FLIGHT001/IMG0001_T31p4C_H78p2RH.jpg)
+  String imgFileName = flightFolderName + "/IMG";
   if (imageCount < 1000) imgFileName += "0";
   if (imageCount < 100) imgFileName += "0";
   if (imageCount < 10) imgFileName += "0";
-  imgFileName += String(imageCount) + ".jpg";
+  imgFileName += String(imageCount) + "_T" + tempString + "C_H" + humString + "RH.jpg";
 
   // Briefly turn on the bright flash LED to indicate picture capture
   digitalWrite(FLASH_LED_PIN, HIGH);
   
-  // Save to SD card
-  File file = SD_MMC.open(imgFileName.c_str(), FILE_WRITE);
-  if (!file) {
-    Serial.println("Failed to open file in writing mode");
+  if (sd_ok) {
+    // Save to SD card
+    File file = SD_MMC.open(imgFileName.c_str(), FILE_WRITE);
+    if (!file) {
+      Serial.println("Failed to open file in writing mode");
+    } else {
+      file.write(fb->buf, fb->len);
+      Serial.printf("Saved image: %s (%u bytes)\n", imgFileName.c_str(), fb->len);
+    }
+    file.close();
   } else {
-    file.write(fb->buf, fb->len);
-    Serial.printf("Saved image: %s (%u bytes)\n", imgFileName.c_str(), fb->len);
+    Serial.printf("SD missing/failed. Cannot save %s (%u bytes)\n", imgFileName.c_str(), fb->len);
   }
-  file.close();
 
   // Turn off flash
   digitalWrite(FLASH_LED_PIN, LOW);
