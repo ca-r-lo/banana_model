@@ -3,6 +3,16 @@
 {% block page_title %}Disease Summary{% endblock %}
 
 {% block content %}
+<div class="results-controls glass-panel" style="margin-bottom: 1.5rem;">
+    <div class="filter-group">
+        <label>Filter by Flight:</label>
+        <select id="flight-filter" class="premium-input">
+            <option value="">All Flights</option>
+            <!-- Filled by JS -->
+        </select>
+    </div>
+</div>
+
 <div class="summary-container">
     <div class="glass-panel summary-chart-panel">
         <div class="widget-header">
@@ -40,57 +50,81 @@
 {% block scripts %}
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        fetch('/api/stats')
-            .then(res => res.json())
-            .then(data => {
-                const summary = data.summary;
-                const total = data.total;
-                
-                const barsContainer = document.getElementById('disease-bars');
-                const tbody = document.getElementById('summary-body');
-                
-                barsContainer.innerHTML = '';
-                tbody.innerHTML = '';
-                
-                if(total === 0) {
-                    barsContainer.innerHTML = '<p>No data available.</p>';
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center">No data available.</td></tr>';
-                    return;
-                }
-                
-                // Sort summary
-                const sorted = Object.entries(summary).sort((a,b) => b[1] - a[1]);
-                const maxVal = sorted[0][1];
-                
-                sorted.forEach(([name, count]) => {
-                    const percent = ((count / total) * 100).toFixed(1);
-                    const barWidth = (count / maxVal) * 100;
-                    const isHealthy = name === 'Healthy';
-                    const colorClass = isHealthy ? 'bar-green' : 'bar-red';
+        let allFlightsLoaded = false;
+        
+        function loadStats() {
+            const flightFilter = document.getElementById('flight-filter').value;
+            const url = flightFilter ? `/api/stats?flight_id=${flightFilter}` : '/api/stats';
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const summary = data.summary;
+                    const total = data.total;
                     
-                    // Bar
-                    barsContainer.innerHTML += `
-                        <div class="bar-row">
-                            <div class="bar-label">${name}</div>
-                            <div class="bar-track">
-                                <div class="bar-fill ${colorClass}" style="width: ${barWidth}%"></div>
+                    const barsContainer = document.getElementById('disease-bars');
+                    const tbody = document.getElementById('summary-body');
+                    
+                    barsContainer.innerHTML = '';
+                    tbody.innerHTML = '';
+                    
+                    // Populate flight dropdown only on initial load
+                    if (!allFlightsLoaded && data.all_flights) {
+                        const flightSelect = document.getElementById('flight-filter');
+                        data.all_flights.forEach(f => {
+                            const option = document.createElement('option');
+                            option.value = f;
+                            option.textContent = f;
+                            flightSelect.appendChild(option);
+                        });
+                        allFlightsLoaded = true;
+                    }
+                    
+                    if(total === 0) {
+                        barsContainer.innerHTML = '<p class="text-muted" style="padding: 1rem;">No data available for this selection.</p>';
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No data available.</td></tr>';
+                        return;
+                    }
+                    
+                    // Sort summary
+                    const sorted = Object.entries(summary).sort((a,b) => b[1] - a[1]);
+                    const maxVal = sorted[0][1];
+                    
+                    sorted.forEach(([name, count]) => {
+                        const percent = ((count / total) * 100).toFixed(1);
+                        const barWidth = (count / maxVal) * 100;
+                        const isHealthy = name === 'Healthy';
+                        const colorClass = isHealthy ? 'bar-green' : 'bar-red';
+                        
+                        // Bar
+                        barsContainer.innerHTML += `
+                            <div class="bar-row">
+                                <div class="bar-label">${name}</div>
+                                <div class="bar-track">
+                                    <div class="bar-fill ${colorClass}" style="width: ${barWidth}%"></div>
+                                </div>
+                                <div class="bar-value">${count}</div>
                             </div>
-                            <div class="bar-value">${count}</div>
-                        </div>
-                    `;
-                    
-                    // Table row
-                    const statusBadge = isHealthy ? '<span class="badge badge-green">Healthy</span>' : '<span class="badge badge-red">Diseased</span>';
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="fw-bold">${name}</td>
-                            <td>${statusBadge}</td>
-                            <td>${count}</td>
-                            <td>${percent}%</td>
-                        </tr>
-                    `;
+                        `;
+                        
+                        // Table row
+                        const statusBadge = isHealthy ? '<span class="badge badge-green">Healthy</span>' : '<span class="badge badge-red">Diseased</span>';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td data-label="Class Name" class="fw-bold">${name}</td>
+                                <td data-label="Status">${statusBadge}</td>
+                                <td data-label="Count">${count}</td>
+                                <td data-label="Percentage">${percent}%</td>
+                            </tr>
+                        `;
+                    });
                 });
-            });
+        }
+        
+        document.getElementById('flight-filter').addEventListener('change', loadStats);
+        
+        // Initial load
+        loadStats();
     });
 </script>
 {% endblock %}

@@ -1,2 +1,26 @@
 /static/uploads
+/uploads/
 /sample_use_esp_camera
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller Build Files
+build/
+dist/
+*.spec
+
+# Database
+database.db
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db

@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             results.forEach(item => {
                 const img = document.createElement('img');
-                img.src = `/static/uploads/${item.filename}`;
+                img.src = `/uploads/${item.filename}`;
                 img.className = 'thumbnail-item';
                 img.dataset.filename = item.filename;
                 img.title = "Click to move to other category";

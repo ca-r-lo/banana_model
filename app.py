@@ -1,21 +1,44 @@
 import os
+import sys
 import sqlite3
 import datetime
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
 from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
+def get_base_path():
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        return sys._MEIPASS
+    except Exception:
+        return os.path.abspath(".")
+
+def get_app_dir():
+    """Get the directory where the executable is running"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(".")
+
+base_path = get_base_path()
+app_dir = get_app_dir()
+
+app = Flask(__name__, 
+            template_folder=os.path.join(base_path, 'templates'),
+            static_folder=os.path.join(base_path, 'static'))
 
 # --- CONFIGURATION ---
-MODEL_PATH = "banana_model.tflite"
-UPLOAD_FOLDER = os.path.join("static", "uploads")
-DB_PATH = "database.db"
+MODEL_PATH = os.path.join(base_path, "banana_model.tflite")
+UPLOAD_FOLDER = os.path.join(app_dir, "uploads")
+DB_PATH = os.path.join(app_dir, "database.db")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 CLASS_NAMES = [
     "Black Sigatoka",
@@ -256,37 +279,54 @@ def api_results():
 @app.route("/api/stats")
 def api_stats():
     conn = get_db()
+    flight_id = request.args.get("flight_id")
     
-    total = conn.execute("SELECT COUNT(*) FROM results").fetchone()[0]
-    healthy = conn.execute("SELECT COUNT(*) FROM results WHERE status = 'Healthy'").fetchone()[0]
-    diseased = conn.execute("SELECT COUNT(*) FROM results WHERE status = 'Diseased'").fetchone()[0]
+    where_clause = ""
+    params = ()
+    if flight_id:
+        where_clause = "WHERE flight_id = ?"
+        params = (flight_id,)
+        
+    total = conn.execute(f"SELECT COUNT(*) FROM results {where_clause}", params).fetchone()[0]
     
-    avg_conf = conn.execute("SELECT AVG(confidence) FROM results").fetchone()[0]
+    healthy_where = "WHERE status = 'Healthy'" + (" AND flight_id = ?" if flight_id else "")
+    healthy = conn.execute(f"SELECT COUNT(*) FROM results {healthy_where}", params).fetchone()[0]
+    
+    diseased_where = "WHERE status = 'Diseased'" + (" AND flight_id = ?" if flight_id else "")
+    diseased = conn.execute(f"SELECT COUNT(*) FROM results {diseased_where}", params).fetchone()[0]
+    
+    avg_conf = conn.execute(f"SELECT AVG(confidence) FROM results {where_clause}", params).fetchone()[0]
     avg_conf = round(avg_conf * 100, 2) if avg_conf else 0
     
     # Most detected disease
-    most_detected = conn.execute('''
+    most_where = "WHERE status = 'Diseased'" + (" AND flight_id = ?" if flight_id else "")
+    most_detected = conn.execute(f'''
         SELECT prediction, COUNT(*) as count 
         FROM results 
-        WHERE status = 'Diseased' 
+        {most_where} 
         GROUP BY prediction 
         ORDER BY count DESC 
         LIMIT 1
-    ''').fetchone()
+    ''', params).fetchone()
     most_detected_name = most_detected["prediction"] if most_detected else "None"
     
     # Summary by disease
-    disease_summary = conn.execute('''
+    disease_summary = conn.execute(f'''
         SELECT prediction, COUNT(*) as count
         FROM results
+        {where_clause}
         GROUP BY prediction
         ORDER BY count DESC
-    ''').fetchall()
+    ''', params).fetchall()
     summary = {row["prediction"]: row["count"] for row in disease_summary}
     
-    # Recent flights
+    # Recent flights (always show all flights for dropdown options)
     flights = conn.execute("SELECT DISTINCT flight_id FROM results ORDER BY date_uploaded DESC LIMIT 10").fetchall()
     recent_flights = [row["flight_id"] for row in flights]
+    
+    # All flights (for dropdown)
+    all_flights_rows = conn.execute("SELECT DISTINCT flight_id FROM results ORDER BY flight_id").fetchall()
+    all_flights = [row["flight_id"] for row in all_flights_rows]
     
     conn.close()
     
@@ -297,7 +337,8 @@ def api_stats():
         "avg_confidence": avg_conf,
         "most_detected": most_detected_name,
         "summary": summary,
-        "recent_flights": recent_flights
+        "recent_flights": recent_flights,
+        "all_flights": all_flights
     })
 
 # --- FLIGHT CRUD APIs ---

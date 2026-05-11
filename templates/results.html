@@ -104,8 +104,8 @@
                 
                 tr.innerHTML = `
                     <td data-label="Image">
-                        <div class="img-preview" style="cursor: pointer;" onclick="openImageViewer('/static/uploads/${item.filename}')" title="Click to view full image">
-                            <img src="/static/uploads/${item.filename}" alt="Image" loading="lazy">
+                        <div class="img-preview" style="cursor: pointer;" onclick="openImageViewer('/uploads/${item.filename}')" title="Click to view full image">
+                            <img src="/uploads/${item.filename}" alt="Image" loading="lazy">
                             <span class="img-name" style="word-break: break-all; max-width: 150px;">${item.filename}</span>
                         </div>
                     </td>
