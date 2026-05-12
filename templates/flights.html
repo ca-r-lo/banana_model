@@ -123,7 +123,13 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ new_flight_id: newId })
         })
-        .then(res => res.json())
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Server Error');
+            }
+            return data;
+        })
         .then(data => {
             btn.disabled = false;
             closeEditModal();
@@ -131,7 +137,7 @@
         })
         .catch(err => {
             btn.disabled = false;
-            alert('Error renaming flight');
+            alert('Error renaming flight: ' + err.message);
         });
     });
     
@@ -143,12 +149,21 @@
         fetch(`/api/flights/${flightId}`, {
             method: 'DELETE'
         })
-        .then(res => res.json())
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Server Error');
+            }
+            return data;
+        })
         .then(data => {
+            if (data.warning) {
+                alert("WARNING: " + data.warning);
+            }
             loadFlights();
         })
         .catch(err => {
-            alert('Error deleting flight');
+            alert('Error deleting flight: ' + err.message);
         });
     }
 </script>

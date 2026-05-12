@@ -71,22 +71,29 @@ def preprocess_image(image_bytes):
     return image_array
 
 def is_leaf_image(image_bytes):
-    # Simple heuristic to detect if image has green/plant-like colors
-    image = Image.open(io.BytesIO(image_bytes)).convert("HSV")
-    image.thumbnail((100, 100))
-    img_array = np.array(image)
-    
-    # In PIL HSV, H is 0-255. Plant hues (brown, yellow, green) roughly 20 to 100.
-    h = img_array[:,:,0]
-    s = img_array[:,:,1]
-    v = img_array[:,:,2]
-    
-    # Check for plant-like pixels (hue 20-110, some saturation and brightness)
-    is_plant = (h > 15) & (h < 110) & (s > 30) & (v > 30)
-    plant_ratio = np.sum(is_plant) / is_plant.size
-    
-    # If at least 2% of the image is plant-like, classify as leaf
-    return bool(plant_ratio > 0.02)
+    try:
+        # Simple heuristic to detect if image has green/plant-like colors
+        image = Image.open(io.BytesIO(image_bytes))
+        image.load() # Force load to catch truncated/corrupted files immediately
+        image = image.convert("HSV")
+        
+        image.thumbnail((100, 100))
+        img_array = np.array(image)
+        
+        # In PIL HSV, H is 0-255. Plant hues (brown, yellow, green) roughly 20 to 100.
+        h = img_array[:,:,0]
+        s = img_array[:,:,1]
+        v = img_array[:,:,2]
+        
+        # Check for plant-like pixels (hue 20-110, some saturation and brightness)
+        is_plant = (h > 15) & (h < 110) & (s > 30) & (v > 30)
+        plant_ratio = np.sum(is_plant) / is_plant.size
+        
+        # If at least 2% of the image is plant-like, classify as leaf
+        return bool(plant_ratio > 0.02)
+    except Exception as e:
+        print(f"Corrupted image detected during leaf check: {e}")
+        return None
 
 def run_prediction(image_bytes):
     if not MODEL_LOADED:
@@ -218,9 +225,15 @@ def api_upload():
         with open(filepath, "wb") as f:
             f.write(image_bytes)
             
-        # Run pre-filter classification
+        # Run pre-filter classification (will return None if corrupted)
         is_leaf = is_leaf_image(image_bytes)
         
+        if is_leaf is None:
+            print(f"Filtering out corrupted file: {unique_filename}")
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            continue
+            
         processed.append({
             "filename": unique_filename,
             "is_leaf": is_leaf
@@ -244,15 +257,18 @@ def api_analyze():
             with open(filepath, "rb") as f:
                 image_bytes = f.read()
                 
-            pred_result = run_prediction(image_bytes)
-            temp, hum = parse_metadata_from_filename(filename)
-            
-            conn.execute('''
-                INSERT INTO results (filename, flight_id, prediction, confidence, status, date_uploaded, temperature, humidity)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (filename, flight_id, pred_result["prediction"], pred_result["confidence"], pred_result["status"], upload_date, temp, hum))
-            analyzed_count += 1
-            
+            try:
+                pred_result = run_prediction(image_bytes)
+                temp, hum = parse_metadata_from_filename(filename)
+                
+                conn.execute('''
+                    INSERT INTO results (filename, flight_id, prediction, confidence, status, date_uploaded, temperature, humidity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (filename, flight_id, pred_result["prediction"], pred_result["confidence"], pred_result["status"], upload_date, temp, hum))
+                analyzed_count += 1
+            except Exception as e:
+                print(f"Failed to analyze {filename}: {e}")
+                
     conn.commit()
     conn.close()
     
@@ -363,20 +379,59 @@ def update_flight(flight_id):
     if not new_flight_id:
         return jsonify({"error": "New flight ID is required"}), 400
         
-    conn = get_db()
-    conn.execute('UPDATE results SET flight_id = ? WHERE flight_id = ?', (new_flight_id, flight_id))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db()
+        conn.execute('UPDATE results SET flight_id = ? WHERE flight_id = ?', (new_flight_id, flight_id))
+        conn.commit()
+    except Exception as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        if 'conn' in locals() and hasattr(conn, 'close'):
+            try:
+                conn.close()
+            except:
+                pass
     
     return jsonify({"success": True})
 
 @app.route("/api/flights/<path:flight_id>", methods=["DELETE"])
 def delete_flight(flight_id):
-    conn = get_db()
-    conn.execute('DELETE FROM results WHERE flight_id = ?', (flight_id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db()
+        
+        # Fetch filenames associated with this flight before deleting
+        rows = conn.execute('SELECT filename FROM results WHERE flight_id = ?', (flight_id,)).fetchall()
+        filenames_to_delete = [row["filename"] for row in rows]
+        
+        # Delete records from the database
+        conn.execute('DELETE FROM results WHERE flight_id = ?', (flight_id,))
+        conn.commit()
+    except Exception as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        if 'conn' in locals() and hasattr(conn, 'close'):
+            try:
+                conn.close()
+            except:
+                pass
     
+    # Delete physical image files from the server
+    failed_deletes = 0
+    for filename in filenames_to_delete:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"Failed to delete {filepath}: {e}")
+                failed_deletes += 1
+                
+    if failed_deletes > 0:
+        return jsonify({
+            "success": True, 
+            "warning": f"Records deleted, but {failed_deletes} files could not be deleted from disk (they may be locked)."
+        })
+                
     return jsonify({"success": True})
 
 @app.route("/api/bulk_test", methods=["POST"])
