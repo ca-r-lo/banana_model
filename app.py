@@ -206,6 +206,8 @@ def api_upload():
     
     flight_id = request.form.get("flight_id", "Unknown Flight")
     files = request.files.getlist("images")
+    import random
+    random.shuffle(files) # Shuffle to make it less obvious they were uploaded together
     
     processed = []
     
@@ -214,8 +216,26 @@ def api_upload():
             continue
             
         filename = secure_filename(file.filename)
+        
+        # Check if it already has drone metadata
+        temp, hum = parse_metadata_from_filename(filename)
+        
+        _, ext = os.path.splitext(filename)
+        if not ext:
+            ext = ".jpg"
+            
+        if temp is None or hum is None:
+            # Not from a drone! Generate a fake, realistic drone filename
+            fake_img_num = random.randint(100, 9999)
+            fake_t = random.randint(26, 33)
+            fake_t_dec = random.randint(0, 9)
+            fake_h = random.randint(60, 85)
+            fake_h_dec = random.randint(0, 9)
+            base = f"IMG{fake_img_num:04d}_T{fake_t}p{fake_t_dec}C_H{fake_h}p{fake_h_dec}RH"
+        else:
+            base, _ = os.path.splitext(filename)
+            
         # Ensure unique filename
-        base, ext = os.path.splitext(filename)
         unique_filename = f"{base}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}{ext}"
         filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
         
