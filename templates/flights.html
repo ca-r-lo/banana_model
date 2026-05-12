@@ -118,7 +118,7 @@
         const btn = document.getElementById('save-rename-btn');
         btn.disabled = true;
         
-        fetch(`/api/flights/${oldId}`, {
+        fetch(`/api/flights/${encodeURIComponent(oldId)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ new_flight_id: newId })
@@ -146,7 +146,7 @@
             return;
         }
         
-        fetch(`/api/flights/${flightId}`, {
+        fetch(`/api/flights/${encodeURIComponent(flightId)}`, {
             method: 'DELETE'
         })
         .then(async res => {
