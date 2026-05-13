@@ -454,51 +454,46 @@ def delete_flight(flight_id):
                 
     return jsonify({"success": True})
 
-@app.route("/api/bulk_test", methods=["POST"])
-def api_bulk_test():
-    expected_label = request.form.get("expected_label")
-    files = request.files.getlist("images")
-    
-    if not expected_label or not files:
-        return jsonify({"error": "Missing expected label or images"}), 400
-        
-    total = 0
-    correct = 0
+@app.route("/api/evaluate", methods=["POST"])
+def api_evaluate():
     results = []
+    total_processed = 0
+    correct_overall = 0
     
-    class_summary = {cls: {"predicted_count": 0} for cls in CLASS_NAMES}
-    
-    for file in files:
-        if file.filename == "":
-            continue
-        image_bytes = file.read()
-        prediction = run_prediction(image_bytes)
-        
-        is_correct = prediction["prediction"] == expected_label
-        total += 1
-        if is_correct:
-            correct += 1
+    for cls in CLASS_NAMES:
+        # We will use the class name directly as the key in the form data
+        files = request.files.getlist(f"images_{cls}")
+        for file in files:
+            if file.filename == "": continue
             
-        class_summary[prediction["prediction"]]["predicted_count"] += 1
+            image_bytes = file.read()
+            prediction = run_prediction(image_bytes)
+            
+            is_correct = prediction["prediction"] == cls
+            total_processed += 1
+            if is_correct: correct_overall += 1
+            
+            results.append({
+                "filename": file.filename,
+                "expected": cls,
+                "prediction": prediction["prediction"],
+                "confidence": prediction["confidence"],
+                "correct": is_correct,
+                "status": prediction["status"]
+            })
+            
+    if total_processed == 0:
+        return jsonify({"error": "No images provided for any class"}), 400
         
-        results.append({
-            "filename": file.filename,
-            "expected": expected_label,
-            "prediction": prediction["prediction"],
-            "confidence": prediction["confidence"],
-            "correct": is_correct
-        })
-        
-    accuracy = (correct / total * 100) if total > 0 else 0
+    accuracy = (correct_overall / total_processed * 100) if total_processed > 0 else 0
     
     return jsonify({
-        "expected_label": expected_label,
-        "total": total,
-        "correct": correct,
-        "wrong": total - correct,
+        "total": total_processed,
+        "correct": correct_overall,
+        "wrong": total_processed - correct_overall,
         "accuracy": accuracy,
-        "class_summary": class_summary,
-        "results": results
+        "results": results,
+        "classes": CLASS_NAMES
     })
 
 if __name__ == "__main__":

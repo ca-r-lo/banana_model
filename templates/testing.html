@@ -1,103 +1,313 @@
 {% extends "base.html" %}
 
-{% block page_title %}Model Evaluation{% endblock %}
+{% block page_title %}Multi-Class Statistical Evaluation{% endblock %}
 
 {% block content %}
 <div class="testing-container glass-panel">
     <div class="widget-header">
-        <h2>Run Accuracy Test</h2>
-        <p class="text-muted">Upload a batch of images that you KNOW belong to a specific disease class to verify the model's accuracy.</p>
+        <h2>Multi-Class Model Evaluation</h2>
+        <p class="text-muted">Upload test images for specific diseases to evaluate the model's precise multi-class
+            classification performance.</p>
     </div>
-    
+
     <div class="test-form">
-        <div class="form-group">
-            <label>True Disease Label:</label>
-            <select id="test-label" class="premium-input">
-                {% for cls in classes %}
-                <option value="{{ cls }}">{{ cls }}</option>
-                {% endfor %}
-            </select>
+        <h3 style="margin-bottom: 15px;">Upload Test Data by Class</h3>
+        <div class="flex-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+            {% for cls in classes %}
+            <div class="form-group flex-1"
+                style="flex: 1; min-width: 250px; background: #fcfdfa; padding: 15px; border-radius: 12px; border: 1px solid #eef2eb;">
+                <label style="color: #2f7d32; font-size: 15px;">{{ cls }}</label>
+                <p class="text-xs text-muted mb-2" style="font-size: 12px; margin-bottom: 8px;">Upload known {{ cls }}
+                    images.</p>
+                <input type="file" data-cls="{{ cls }}" multiple accept="image/*"
+                    class="premium-input file-input class-upload" style="background: white;">
+            </div>
+            {% endfor %}
         </div>
-        
-        <div class="form-group">
-            <label>Test Images:</label>
-            <input type="file" id="test-files" multiple accept="image/*" class="premium-input file-input">
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="run-test-btn" class="btn primary-btn flex-1" style="width: 100%; font-size: 16px;"><i
+                    class="fa-solid fa-vial"></i> Run Comprehensive Evaluation</button>
+            <button id="reset-stats-btn" class="btn btn-outline"
+                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 14px; cursor: pointer; color: #5b6d59;"><i
+                    class="fa-solid fa-rotate-left"></i> Reset Stats</button>
         </div>
-        
-        <button id="run-test-btn" class="btn primary-btn"><i class="fa-solid fa-vial"></i> Run Evaluation</button>
     </div>
-    
-    <div id="test-loading" class="hidden text-center margin-top">
+
+    <div id="test-loading" class="hidden text-center margin-top" style="margin-top: 30px;">
         <i class="fa-solid fa-circle-notch fa-spin fa-2x text-blue"></i>
-        <p>Evaluating model...</p>
+        <p>Running model predictions on all uploaded classes...</p>
     </div>
-    
-    <div id="test-results" class="hidden margin-top">
-        <div class="results-summary flex-row">
-            <div class="stat-box">
-                <h4>Total Tested</h4>
-                <div id="tr-total" class="h2">--</div>
-            </div>
-            <div class="stat-box success">
-                <h4>Correct</h4>
-                <div id="tr-correct" class="h2">--</div>
-            </div>
-            <div class="stat-box danger">
-                <h4>Incorrect</h4>
-                <div id="tr-wrong" class="h2">--</div>
-            </div>
-            <div class="stat-box highlight">
-                <h4>Accuracy</h4>
-                <div id="tr-accuracy" class="h2">--%</div>
+
+    <div id="test-results" class="hidden margin-top" style="margin-top: 50px;">
+
+        <!-- Multi-Class Confusion Matrix -->
+        <h3 style="margin-left: 30px; margin-bottom: 8px; color: #183218;">Multi-Class Confusion Matrix</h3>
+        <p class="text-xs text-muted mb-2" style="margin-left: 30px; margin-bottom: 20px;">Rows represent the Actual
+            uploaded class, columns represent the Predicted class. Correct predictions fall on the diagonal.</p>
+        <div class="table-responsive" style="overflow-x: auto; margin-bottom: 50px;">
+            <table class="styled-table"
+                style="width: 100%; text-align: center; border-collapse: collapse; min-width: 800px;">
+                <thead id="mc-thead">
+                    <!-- Injected via JS -->
+                </thead>
+                <tbody id="mc-tbody">
+                    <!-- Injected via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Per-Class Metrics Breakdown -->
+        <h3 style="padding-top: 20px; margin-bottom: 10px; color: #183218; margin-left: 30px;">Per-Disease Performance
+            Breakdown</h3>
+        <p class="text-xs text-muted mb-2" style="margin-bottom: 25px; margin-left: 30px;">Detailed accuracy metrics for
+            each specific
+            disease classification.</p>
+        <div class="table-responsive" style="margin-bottom: 50px;">
+            <table class="styled-table" style="width: 100%; text-align: center; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th
+                            style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left;">
+                            Class</th>
+                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Accuracy</th>
+                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Precision</th>
+                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Recall</th>
+                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">F1-Score</th>
+                    </tr>
+                </thead>
+                <tbody id="per-class-tbody">
+                    <!-- Injected via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Overall Binary Metrics -->
+        <div style="border-top: 2px dashed #e1eadc; padding-top: 40px; margin-top: 40px;">
+            <h3 style="margin-bottom: 8px; color: #183218; margin-left: 30px;">Aggregate Binary Performance (Diseased
+                vs. Healthy)</h3>
+            <p class="text-muted" style="font-size: 14px; margin-bottom: 25px; margin-left: 30px;">Evaluates the
+                system's ability to detect
+                an anomaly (any disease) versus a normal state (healthy).</p>
+
+            <div class="results-summary flex-row stat-grid">
+                <div class="stat-box stat-card highlight" style="text-align: center;">
+                    <h4>Overall Accuracy</h4>
+                    <div id="metric-accuracy" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">--%
+                    </div>
+                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">Measures how often the model is correct overall. A high accuracy means it generally makes the right call on whether a leaf is diseased or healthy.</small>
+                </div>
+                <div class="stat-box stat-card" style="text-align: center;">
+                    <h4>Binary Precision</h4>
+                    <div id="metric-precision" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">
+                        --%</div>
+                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">When the model sounds the alarm (predicts disease), how often is it actually a disease? High precision means fewer false alarms.</small>
+                </div>
+                <div class="stat-box stat-card" style="text-align: center;">
+                    <h4>Binary Recall</h4>
+                    <div id="metric-recall" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">--%
+                    </div>
+                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">Out of all truly diseased leaves, how many did the model successfully catch? High recall means fewer missed diseases.</small>
+                </div>
+                <div class="stat-box stat-card" style="text-align: center;">
+                    <h4>False Positive Rate</h4>
+                    <div id="metric-fpr" class="h2" style="font-size: 28px; font-weight: bold; color: #b42318;">--%
+                    </div>
+                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">The percentage of perfectly healthy leaves that were incorrectly flagged as diseased (false alarms).</small>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('run-test-btn').addEventListener('click', () => {
-        const files = document.getElementById('test-files').files;
-        const label = document.getElementById('test-label').value;
-        
-        if(files.length === 0) {
-            alert("Please select images to test.");
+    const classesList = {{ classes| tojson }};
+
+    // Global stats accumulator
+    let globalResults = [];
+
+    function updateMetricsUI() {
+        if (globalResults.length === 0) {
+            document.getElementById('test-results').classList.add('hidden');
             return;
         }
-        
+
+        // 1. Build Multi-Class Confusion Matrix
+        let matrix = {};
+        classesList.forEach(c1 => {
+            matrix[c1] = {};
+            classesList.forEach(c2 => matrix[c1][c2] = 0);
+        });
+
+        let binaryTP = 0, binaryTN = 0, binaryFP = 0, binaryFN = 0;
+        let overallCorrect = 0;
+
+        globalResults.forEach(res => {
+            // Populate NxN matrix
+            matrix[res.expected][res.prediction]++;
+
+            // Overall specific multi-class correctness
+            if (res.expected === res.prediction) overallCorrect++;
+
+            // Populate Binary Matrix (Disease vs Healthy)
+            let actualIsDisease = res.expected !== "Healthy";
+            let predictedIsDisease = res.status === "Diseased";
+
+            if (actualIsDisease) {
+                if (predictedIsDisease) binaryTP++; else binaryFN++;
+            } else {
+                if (predictedIsDisease) binaryFP++; else binaryTN++;
+            }
+        });
+
+        // 2. Render Multi-Class Matrix Table
+        let thead = '<tr><th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left;">Actual \\ Predicted</th>';
+        classesList.forEach(c => {
+            thead += `<th style="background: #f4f9f0; padding: 16px 12px; border: 1px solid #e4ecdf; font-size: 13px;">${c}</th>`;
+        });
+        thead += '</tr>';
+        document.getElementById('mc-thead').innerHTML = thead;
+
+        let tbody = '';
+        classesList.forEach(actual => {
+            tbody += `<tr><th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left; font-size: 13px;">${actual}</th>`;
+            classesList.forEach(predicted => {
+                let count = matrix[actual][predicted];
+                let isDiag = (actual === predicted);
+
+                let bg = '#ffffff';
+                let color = '#aaa';
+                let fw = 'normal';
+
+                if (count > 0) {
+                    if (isDiag) { bg = '#eaf5e6'; color = '#2f7d32'; fw = 'bold'; }
+                    else { bg = '#fbeded'; color = '#b42318'; fw = 'bold'; }
+                }
+
+                tbody += `<td style="background-color: ${bg}; color: ${color}; font-weight: ${fw}; text-align: center; border: 1px solid #e4ecdf; padding: 16px;">${count}</td>`;
+            });
+            tbody += '</tr>';
+        });
+        document.getElementById('mc-tbody').innerHTML = tbody;
+
+        // 3. Render Per-Class Metrics
+        let perClassHtml = '';
+        classesList.forEach(cls => {
+            let tp = matrix[cls][cls];
+            let fn = 0;
+            let fp = 0;
+            let totalInstances = 0;
+
+            classesList.forEach(r => {
+                classesList.forEach(c => {
+                    totalInstances += matrix[r][c];
+                });
+            });
+
+            classesList.forEach(other => {
+                if (other !== cls) {
+                    fn += matrix[cls][other];
+                    fp += matrix[other][cls];
+                }
+            });
+            
+            let tn = totalInstances - (tp + fp + fn);
+
+            let accuracy = totalInstances > 0 ? ((tp + tn) / totalInstances) : 0;
+            let precision = (tp + fp) > 0 ? (tp / (tp + fp)) : 0;
+            let recall = (tp + fn) > 0 ? (tp / (tp + fn)) : 0;
+            let f1 = (precision + recall) > 0 ? 2 * ((precision * recall) / (precision + recall)) : 0;
+
+            // Only show classes that were actually tested or predicted
+            if ((tp + fn + fp) > 0) {
+                perClassHtml += `
+                <tr>
+                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left; font-weight: bold; color: #385038;">${cls}</td>
+                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(accuracy * 100).toFixed(1)}%</td>
+                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(precision * 100).toFixed(1)}%</td>
+                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(recall * 100).toFixed(1)}%</td>
+                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf; font-weight: bold;">${(f1 * 100).toFixed(1)}%</td>
+                </tr>`;
+            }
+        });
+        document.getElementById('per-class-tbody').innerHTML = perClassHtml || '<tr><td colspan="4" style="padding: 20px;">No data evaluated yet.</td></tr>';
+
+        // 4. Update Binary Metrics
+        const total = globalResults.length;
+        const binAccuracy = total > 0 ? ((binaryTP + binaryTN) / total * 100) : 0;
+        const binPrecision = (binaryTP + binaryFP) > 0 ? (binaryTP / (binaryTP + binaryFP) * 100) : 0;
+        const binRecall = (binaryTP + binaryFN) > 0 ? (binaryTP / (binaryTP + binaryFN) * 100) : 0;
+        const binFpr = (binaryFP + binaryTN) > 0 ? (binaryFP / (binaryFP + binaryTN) * 100) : 0;
+
+        // Overall exact multi-class accuracy
+        const mcAccuracy = total > 0 ? (overallCorrect / total * 100) : 0;
+
+        document.getElementById('metric-accuracy').textContent = mcAccuracy.toFixed(1) + '%';
+        document.getElementById('metric-precision').textContent = binPrecision.toFixed(1) + '%';
+        document.getElementById('metric-recall').textContent = binRecall.toFixed(1) + '%';
+        document.getElementById('metric-fpr').textContent = binFpr.toFixed(1) + '%';
+
+        document.getElementById('test-results').classList.remove('hidden');
+    }
+
+    document.getElementById('reset-stats-btn').addEventListener('click', () => {
+        globalResults = [];
+        updateMetricsUI();
+        document.querySelectorAll('.class-upload').forEach(input => input.value = "");
+    });
+
+    document.getElementById('run-test-btn').addEventListener('click', () => {
+        const fileInputs = document.querySelectorAll('.class-upload');
+        const formData = new FormData();
+        let hasFiles = false;
+
+        fileInputs.forEach(input => {
+            if (input.files.length > 0) {
+                hasFiles = true;
+                const clsName = input.getAttribute('data-cls');
+                for (let i = 0; i < input.files.length; i++) {
+                    // Send to backend with key: images_Class_Name
+                    formData.append('images_' + clsName, input.files[i]);
+                }
+            }
+        });
+
+        if (!hasFiles) {
+            alert("Please upload at least some images for any class to evaluate.");
+            return;
+        }
+
         const btn = document.getElementById('run-test-btn');
         btn.disabled = true;
         document.getElementById('test-loading').classList.remove('hidden');
-        document.getElementById('test-results').classList.add('hidden');
-        
-        const formData = new FormData();
-        formData.append('expected_label', label);
-        for(let i=0; i<files.length; i++){
-            formData.append('images', files[i]);
-        }
-        
-        fetch('/api/bulk_test', {
+
+        fetch('/api/evaluate', {
             method: 'POST',
             body: formData
         })
-        .then(res => res.json())
-        .then(data => {
-            btn.disabled = false;
-            document.getElementById('test-loading').classList.add('hidden');
-            document.getElementById('test-results').classList.remove('hidden');
-            
-            document.getElementById('tr-total').textContent = data.total;
-            document.getElementById('tr-correct').textContent = data.correct;
-            document.getElementById('tr-wrong').textContent = data.wrong;
-            document.getElementById('tr-accuracy').textContent = data.accuracy.toFixed(1) + '%';
-        })
-        .catch(err => {
-            btn.disabled = false;
-            document.getElementById('test-loading').classList.add('hidden');
-            alert("Error running evaluation");
-            console.error(err);
-        });
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                document.getElementById('test-loading').classList.add('hidden');
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    return;
+                }
+
+                // Append new results to global accumulator
+                globalResults = globalResults.concat(data.results);
+                updateMetricsUI();
+            })
+            .catch(err => {
+                btn.disabled = false;
+                document.getElementById('test-loading').classList.add('hidden');
+                alert("Error running evaluation");
+                console.error(err);
+            });
     });
 </script>
 {% endblock %}
