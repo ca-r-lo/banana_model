@@ -247,6 +247,13 @@ body {
     letter-spacing: -0.025em;
 }
 
+.stat-explainer {
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
 .dashboard-content {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -675,6 +682,192 @@ body {
     padding: 1.5rem;
 }
 
+.evaluation-report {
+    margin-top: 2rem;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid var(--panel-border);
+}
+
+.report-section {
+    padding-top: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid var(--panel-border);
+}
+
+.report-section:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+
+.report-note {
+    padding: 1rem;
+    background: var(--primary-light);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    color: #1e3a8a;
+}
+
+.section-heading {
+    margin-bottom: 1rem;
+}
+
+.section-heading h3 {
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+}
+
+.report-stat {
+    min-height: 194px;
+    padding: 1rem;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    background: #ffffff;
+}
+
+.report-stat span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.report-stat strong {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--primary);
+    font-size: 1.6rem;
+}
+
+.report-stat small,
+.report-footnote {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.report-stat p {
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.analysis-guide {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #dbeafe;
+    border-radius: var(--radius);
+    background: #f8fbff;
+}
+
+.analysis-guide h4 {
+    margin-bottom: 0.75rem;
+    color: #1e3a8a;
+    font-size: 0.9rem;
+}
+
+.analysis-guide dl {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.35fr) 1fr;
+    gap: 0.55rem 1rem;
+}
+
+.analysis-guide dt {
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 0.84rem;
+}
+
+.analysis-guide dd {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.analysis-warning {
+    margin-top: 0.85rem;
+    color: #92400e;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.evaluation-table {
+    min-width: 760px;
+}
+
+.evaluation-table th,
+.evaluation-table td {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.evaluation-table th:first-child,
+.evaluation-table td:first-child {
+    text-align: left;
+}
+
+.compact-table {
+    min-width: 0;
+}
+
+.compact-table th,
+.compact-table td {
+    padding: 0.65rem 0.8rem;
+    font-size: 0.82rem;
+}
+
+.matrix-hit {
+    background: var(--success-light);
+    color: var(--success);
+    font-weight: 700;
+}
+
+.matrix-miss {
+    background: var(--danger-light);
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.report-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.report-columns h4 {
+    margin-bottom: 0.75rem;
+    color: var(--text-main);
+}
+
+.report-subsection {
+    margin-top: 1.5rem;
+}
+
+.filename-cell {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+}
+
 .flex-row {
     display: flex;
     gap: 1.5rem;
@@ -808,6 +1001,50 @@ body {
         font-size: 0.85rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+    }
+
+    .evaluation-table thead {
+        display: table-header-group;
+    }
+
+    .evaluation-table,
+    .evaluation-table tbody {
+        display: table;
+        width: 100%;
+    }
+
+    .evaluation-table tr {
+        display: table-row;
+        margin-bottom: 0;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .evaluation-table th,
+    .evaluation-table td {
+        display: table-cell;
+        width: auto;
+        text-align: center;
+        padding: 0.75rem 1rem;
+    }
+
+    .evaluation-table th:first-child,
+    .evaluation-table td:first-child {
+        text-align: left;
+    }
+
+    .evaluation-table td::before {
+        content: none;
+    }
+
+    .analysis-guide dl {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+
+    .analysis-guide dd {
+        margin-bottom: 0.5rem;
     }
 }
 

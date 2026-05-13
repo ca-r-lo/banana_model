@@ -6,8 +6,7 @@
 <div class="testing-container glass-panel">
     <div class="widget-header">
         <h2>Multi-Class Model Evaluation</h2>
-        <p class="text-muted">Upload test images for specific diseases to evaluate the model's precise multi-class
-            classification performance.</p>
+        <p class="text-muted">Upload labeled holdout images by true class to generate a research-ready validation report.</p>
     </div>
 
     <div class="test-form">
@@ -15,109 +14,419 @@
         <div class="flex-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
             {% for cls in classes %}
             <div class="form-group flex-1"
-                style="flex: 1; min-width: 250px; background: #fcfdfa; padding: 15px; border-radius: 12px; border: 1px solid #eef2eb;">
+                style="flex: 1; min-width: 250px; background: #fcfdfa; padding: 15px; border-radius: 8px; border: 1px solid #eef2eb;">
                 <label style="color: #2f7d32; font-size: 15px;">{{ cls }}</label>
-                <p class="text-xs text-muted mb-2" style="font-size: 12px; margin-bottom: 8px;">Upload known {{ cls }}
-                    images.</p>
+                <p class="text-xs text-muted mb-2" style="font-size: 12px; margin-bottom: 8px;">Known {{ cls }} images</p>
                 <input type="file" data-cls="{{ cls }}" multiple accept="image/*"
                     class="premium-input file-input class-upload" style="background: white;">
             </div>
             {% endfor %}
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 30px;">
-            <button id="run-test-btn" class="btn primary-btn flex-1" style="width: 100%; font-size: 16px;"><i
+        <div style="display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap;">
+            <button id="run-test-btn" class="btn primary-btn flex-1" style="font-size: 16px; min-width: 260px;"><i
                     class="fa-solid fa-vial"></i> Run Comprehensive Evaluation</button>
+            <button id="export-report-btn" class="btn btn-outline" disabled
+                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #385038;"><i
+                    class="fa-solid fa-file-export"></i> Export JSON Report</button>
             <button id="reset-stats-btn" class="btn btn-outline"
-                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 14px; cursor: pointer; color: #5b6d59;"><i
+                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #5b6d59;"><i
                     class="fa-solid fa-rotate-left"></i> Reset Stats</button>
         </div>
     </div>
 
     <div id="test-loading" class="hidden text-center margin-top" style="margin-top: 30px;">
         <i class="fa-solid fa-circle-notch fa-spin fa-2x text-blue"></i>
-        <p>Running model predictions on all uploaded classes...</p>
+        <p>Running model predictions and statistical analysis...</p>
     </div>
 
-    <div id="test-results" class="hidden margin-top" style="margin-top: 50px;">
-
-        <!-- Multi-Class Confusion Matrix -->
-        <h3 style="margin-left: 30px; margin-bottom: 8px; color: #183218;">Multi-Class Confusion Matrix</h3>
-        <p class="text-xs text-muted mb-2" style="margin-left: 30px; margin-bottom: 20px;">Rows represent the Actual
-            uploaded class, columns represent the Predicted class. Correct predictions fall on the diagonal.</p>
-        <div class="table-responsive" style="overflow-x: auto; margin-bottom: 50px;">
-            <table class="styled-table"
-                style="width: 100%; text-align: center; border-collapse: collapse; min-width: 800px;">
-                <thead id="mc-thead">
-                    <!-- Injected via JS -->
-                </thead>
-                <tbody id="mc-tbody">
-                    <!-- Injected via JS -->
-                </tbody>
-            </table>
+    <div id="test-results" class="hidden evaluation-report">
+        <div class="report-section report-note">
+            <strong>Validation note:</strong>
+            <span id="data-note">Metrics apply only to labeled evaluation uploads.</span>
         </div>
 
-        <!-- Per-Class Metrics Breakdown -->
-        <h3 style="padding-top: 20px; margin-bottom: 10px; color: #183218; margin-left: 30px;">Per-Disease Performance
-            Breakdown</h3>
-        <p class="text-xs text-muted mb-2" style="margin-bottom: 25px; margin-left: 30px;">Detailed accuracy metrics for
-            each specific
-            disease classification.</p>
-        <div class="table-responsive" style="margin-bottom: 50px;">
-            <table class="styled-table" style="width: 100%; text-align: center; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th
-                            style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left;">
-                            Class</th>
-                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Accuracy</th>
-                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Precision</th>
-                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">Recall</th>
-                        <th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf;">F1-Score</th>
-                    </tr>
-                </thead>
-                <tbody id="per-class-tbody">
-                    <!-- Injected via JS -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Overall Binary Metrics -->
-        <div style="border-top: 2px dashed #e1eadc; padding-top: 40px; margin-top: 40px;">
-            <h3 style="margin-bottom: 8px; color: #183218; margin-left: 30px;">Aggregate Binary Performance (Diseased
-                vs. Healthy)</h3>
-            <p class="text-muted" style="font-size: 14px; margin-bottom: 25px; margin-left: 30px;">Evaluates the
-                system's ability to detect
-                an anomaly (any disease) versus a normal state (healthy).</p>
-
-            <div class="results-summary flex-row stat-grid">
-                <div class="stat-box stat-card highlight" style="text-align: center;">
-                    <h4>Overall Accuracy</h4>
-                    <div id="metric-accuracy" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">--%
-                    </div>
-                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">Measures how often the model is correct overall. A high accuracy means it generally makes the right call on whether a leaf is diseased or healthy.</small>
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Statistical Summary</h3>
+            </div>
+            <div class="analysis-guide">
+                <h4>What these readings mean</h4>
+                <dl>
+                    <dt>Total Images</dt>
+                    <dd>How many labeled test images were included in the evaluation.</dd>
+                    <dt>Overall Accuracy</dt>
+                    <dd>The percentage of all uploaded test images that the model classified correctly.</dd>
+                    <dt>Macro F1</dt>
+                    <dd>The average F1 score across classes where every class counts equally.</dd>
+                    <dt>Weighted F1</dt>
+                    <dd>The F1 score averaged by class size, so classes with more test images have more influence.</dd>
+                    <dt>Balanced Accuracy</dt>
+                    <dd>The average recall across classes, useful when the test set is not evenly balanced.</dd>
+                    <dt>Calibration Error</dt>
+                    <dd>How far the model's confidence is from its actual correctness. Lower is better.</dd>
+                </dl>
+            </div>
+            <div class="report-grid">
+                <div class="report-stat">
+                    <span>Total Images</span>
+                    <strong id="report-total">--</strong>
+                    <small id="report-correct">-- correct</small>
+                    <p>Number of labeled test images included in this evaluation. More images make the result more reliable.</p>
                 </div>
-                <div class="stat-box stat-card" style="text-align: center;">
-                    <h4>Binary Precision</h4>
-                    <div id="metric-precision" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">
-                        --%</div>
-                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">When the model sounds the alarm (predicts disease), how often is it actually a disease? High precision means fewer false alarms.</small>
+                <div class="report-stat">
+                    <span>Overall Accuracy</span>
+                    <strong id="report-accuracy">--</strong>
+                    <small id="report-accuracy-ci">95% CI: --</small>
+                    <p>Percentage of all test images classified correctly. The confidence interval shows the likely range of the true accuracy.</p>
                 </div>
-                <div class="stat-box stat-card" style="text-align: center;">
-                    <h4>Binary Recall</h4>
-                    <div id="metric-recall" class="h2" style="font-size: 28px; font-weight: bold; color: #2f7d32;">--%
-                    </div>
-                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">Out of all truly diseased leaves, how many did the model successfully catch? High recall means fewer missed diseases.</small>
+                <div class="report-stat">
+                    <span>Macro F1</span>
+                    <strong id="report-macro-f1">--</strong>
+                    <small id="report-macro-f1-ci">Bootstrap 95% CI: --</small>
+                    <p>Average F1 score across classes, giving every disease class equal weight even when the test set is imbalanced.</p>
                 </div>
-                <div class="stat-box stat-card" style="text-align: center;">
-                    <h4>False Positive Rate</h4>
-                    <div id="metric-fpr" class="h2" style="font-size: 28px; font-weight: bold; color: #b42318;">--%
-                    </div>
-                    <small class="text-muted" style="display: block; margin-top: 10px; font-size: 13px; line-height: 1.4;">The percentage of perfectly healthy leaves that were incorrectly flagged as diseased (false alarms).</small>
+                <div class="report-stat">
+                    <span>Weighted F1</span>
+                    <strong id="report-weighted-f1">--</strong>
+                    <small id="report-weighted-f1-ci">Bootstrap 95% CI: --</small>
+                    <p>F1 score adjusted by how many images each class has. Large classes influence this reading more.</p>
+                </div>
+                <div class="report-stat">
+                    <span>Balanced Accuracy</span>
+                    <strong id="report-balanced">--</strong>
+                    <small>Macro recall across supported classes</small>
+                    <p>Shows how well the model detects each class on average. Useful when some diseases have fewer examples.</p>
+                </div>
+                <div class="report-stat">
+                    <span>Calibration Error</span>
+                    <strong id="report-ece">--</strong>
+                    <small>Expected calibration error</small>
+                    <p>Measures whether confidence matches correctness. Lower values mean the confidence scores are more trustworthy.</p>
                 </div>
             </div>
         </div>
 
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Multi-Class Confusion Matrix</h3>
+                <p class="text-muted">Rows are actual labels; columns are model predictions.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead id="mc-thead"></thead>
+                    <tbody id="mc-tbody"></tbody>
+                </table>
+            </div>
+            <div class="analysis-guide">
+                <h4>What this table means</h4>
+                <dl>
+                    <dt>Actual \ Predicted</dt>
+                    <dd>Each row is the true label chosen during upload; each column is the class predicted by the model.</dd>
+                    <dt>Diagonal cells</dt>
+                    <dd>Correct predictions where the actual class and predicted class match.</dd>
+                    <dt>Off-diagonal cells</dt>
+                    <dd>Misclassifications showing which diseases were confused with another class.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Per-Class Performance</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th>Support</th>
+                            <th>Predicted</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>Recall 95% CI</th>
+                            <th>Specificity</th>
+                            <th>F1</th>
+                        </tr>
+                    </thead>
+                    <tbody id="per-class-tbody"></tbody>
+                </table>
+            </div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Class</dt>
+                    <dd>The banana disease or healthy category being evaluated.</dd>
+                    <dt>Support</dt>
+                    <dd>Number of test images uploaded with this class as the true label.</dd>
+                    <dt>Predicted</dt>
+                    <dd>Number of images the model predicted as this class, regardless of the true label.</dd>
+                    <dt>Precision</dt>
+                    <dd>When the model predicted this class, how often it was correct.</dd>
+                    <dt>Recall</dt>
+                    <dd>Out of all images truly belonging to this class, how many the model detected.</dd>
+                    <dt>Recall 95% CI</dt>
+                    <dd>The uncertainty range for recall. Wider intervals usually mean fewer test images.</dd>
+                    <dt>Specificity</dt>
+                    <dd>How well the model avoids falsely labeling other classes as this class.</dd>
+                    <dt>F1</dt>
+                    <dd>A combined score balancing precision and recall.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Macro And Weighted Averages</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Average</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>Specificity</th>
+                            <th>F1</th>
+                        </tr>
+                    </thead>
+                    <tbody id="averages-tbody"></tbody>
+                </table>
+            </div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Average</dt>
+                    <dd>Macro treats every class equally; weighted gives larger classes more influence.</dd>
+                    <dt>Precision</dt>
+                    <dd>Average correctness when the model predicts a class.</dd>
+                    <dt>Recall</dt>
+                    <dd>Average ability to find the true class.</dd>
+                    <dt>Specificity</dt>
+                    <dd>Average ability to avoid false alarms for each class.</dd>
+                    <dt>F1</dt>
+                    <dd>Average balance between precision and recall.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Healthy Vs Diseased Screening</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Accuracy</th>
+                            <th>Sensitivity</th>
+                            <th>Specificity</th>
+                            <th>Precision</th>
+                            <th>FPR</th>
+                            <th>FNR</th>
+                            <th>F1</th>
+                            <th>ROC-AUC</th>
+                            <th>PR-AUC</th>
+                            <th>Brier</th>
+                        </tr>
+                    </thead>
+                    <tbody id="binary-tbody"></tbody>
+                </table>
+            </div>
+            <div id="binary-counts" class="text-muted report-footnote"></div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Accuracy</dt>
+                    <dd>Overall correctness when reducing the model to Healthy versus Diseased.</dd>
+                    <dt>Sensitivity</dt>
+                    <dd>How many truly diseased leaves were detected as diseased. Also called recall.</dd>
+                    <dt>Specificity</dt>
+                    <dd>How many truly healthy leaves were correctly kept as healthy.</dd>
+                    <dt>Precision</dt>
+                    <dd>When the model says diseased, how often it is actually diseased.</dd>
+                    <dt>FPR</dt>
+                    <dd>False positive rate: healthy leaves incorrectly flagged as diseased.</dd>
+                    <dt>FNR</dt>
+                    <dd>False negative rate: diseased leaves incorrectly missed as healthy.</dd>
+                    <dt>F1</dt>
+                    <dd>Balance between diseased precision and diseased sensitivity.</dd>
+                    <dt>ROC-AUC</dt>
+                    <dd>How well the model separates healthy from diseased across thresholds. Higher is better.</dd>
+                    <dt>PR-AUC</dt>
+                    <dd>Precision-recall area for diseased detection, useful when healthy and diseased counts are imbalanced.</dd>
+                    <dt>Brier</dt>
+                    <dd>Probability error for Healthy versus Diseased confidence. Lower is better.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Calibration</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Confidence Bin</th>
+                            <th>Count</th>
+                            <th>Accuracy</th>
+                            <th>Avg Confidence</th>
+                            <th>Gap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calibration-tbody"></tbody>
+                </table>
+            </div>
+            <div id="calibration-summary" class="text-muted report-footnote"></div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Confidence Bin</dt>
+                    <dd>The prediction confidence range, such as 0.7 to 0.8.</dd>
+                    <dt>Count</dt>
+                    <dd>Number of predictions that landed in that confidence range.</dd>
+                    <dt>Accuracy</dt>
+                    <dd>How many predictions in the bin were actually correct.</dd>
+                    <dt>Avg Confidence</dt>
+                    <dd>The average confidence score for predictions in the bin.</dd>
+                    <dt>Gap</dt>
+                    <dd>The difference between accuracy and confidence. Smaller gaps mean better calibrated confidence.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Confidence Thresholds</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Threshold</th>
+                            <th>Accepted</th>
+                            <th>Rejected</th>
+                            <th>Coverage</th>
+                            <th>Accepted Accuracy</th>
+                            <th>Accepted Errors</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threshold-tbody"></tbody>
+                </table>
+            </div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Threshold</dt>
+                    <dd>The minimum confidence required before accepting a prediction.</dd>
+                    <dt>Accepted</dt>
+                    <dd>Number of predictions at or above that threshold.</dd>
+                    <dt>Rejected</dt>
+                    <dd>Number of predictions below that threshold that would need review.</dd>
+                    <dt>Coverage</dt>
+                    <dd>Percentage of all predictions that would be accepted automatically.</dd>
+                    <dt>Accepted Accuracy</dt>
+                    <dd>Accuracy among only the accepted predictions.</dd>
+                    <dt>Accepted Errors</dt>
+                    <dd>Number of wrong predictions that would still pass the threshold.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Error Analysis</h3>
+            </div>
+            <div class="report-columns">
+                <div>
+                    <h4>Top Confusion Pairs</h4>
+                    <table class="premium-table evaluation-table compact-table">
+                        <thead>
+                            <tr><th>Actual</th><th>Predicted</th><th>Count</th></tr>
+                        </thead>
+                        <tbody id="confusions-tbody"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <h4>Closest Top-2 Margins</h4>
+                    <table class="premium-table evaluation-table compact-table">
+                        <thead>
+                            <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Margin</th></tr>
+                        </thead>
+                        <tbody id="close-calls-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="report-columns report-subsection">
+                <div>
+                    <h4>High-Confidence Errors</h4>
+                    <table class="premium-table evaluation-table compact-table">
+                        <thead>
+                            <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Confidence</th></tr>
+                        </thead>
+                        <tbody id="high-errors-tbody"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <h4>Low-Confidence Correct</h4>
+                    <table class="premium-table evaluation-table compact-table">
+                        <thead>
+                            <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Confidence</th></tr>
+                        </thead>
+                        <tbody id="low-correct-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="margin-summary" class="text-muted report-footnote"></div>
+            <div class="analysis-guide">
+                <h4>What these tables mean</h4>
+                <dl>
+                    <dt>Top Confusion Pairs</dt>
+                    <dd>Shows the most common actual-to-predicted mistakes and how often each happened.</dd>
+                    <dt>Closest Top-2 Margins</dt>
+                    <dd>Shows predictions where the best and second-best classes were close, meaning the model was less certain.</dd>
+                    <dt>High-Confidence Errors</dt>
+                    <dd>Wrong predictions where the model was very confident. These are important to inspect.</dd>
+                    <dt>Low-Confidence Correct</dt>
+                    <dd>Correct predictions where the model was unsure. These may need a lower-confidence review workflow.</dd>
+                    <dt>Margin</dt>
+                    <dd>The difference between the top predicted probability and the second-highest probability.</dd>
+                    <dt>Confidence</dt>
+                    <dd>The probability score assigned to the predicted class.</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div id="environment-section" class="report-section hidden">
+            <div class="section-heading">
+                <h3>Environmental Metadata</h3>
+            </div>
+            <div class="analysis-guide">
+                <h4>What each column means</h4>
+                <dl>
+                    <dt>Bin</dt>
+                    <dd>Low, Mid, or High range of temperature or humidity values from the filenames.</dd>
+                    <dt>Range</dt>
+                    <dd>The actual sensor-value range covered by that bin.</dd>
+                    <dt>Count</dt>
+                    <dd>Number of labeled test images in that temperature or humidity bin.</dd>
+                    <dt>Accuracy</dt>
+                    <dd>Correct predictions divided by total images in that environmental bin.</dd>
+                    <dt>Confidence</dt>
+                    <dd>Average model confidence for images in that bin.</dd>
+                    <dt>Error correlation</dt>
+                    <dd>Exploratory correlation between the sensor value and whether the model was wrong.</dd>
+                    <dt>Confidence correlation</dt>
+                    <dd>Exploratory correlation between the sensor value and model confidence.</dd>
+                    <dt>Error odds ratio</dt>
+                    <dd>Exploratory logistic trend. Values above 1 suggest errors rise as the sensor value rises.</dd>
+                </dl>
+                <p class="analysis-warning">This section is exploratory only. It does not prove that temperature or humidity caused model errors.</p>
+            </div>
+            <div id="environment-content" class="report-columns"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -126,137 +435,287 @@
 <script>
     const classesList = {{ classes| tojson }};
 
-    // Global stats accumulator
+    let currentReport = null;
     let globalResults = [];
 
-    function updateMetricsUI() {
-        if (globalResults.length === 0) {
-            document.getElementById('test-results').classList.add('hidden');
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+    }
+
+    function pct(value, digits = 1) {
+        if (value === null || value === undefined || Number.isNaN(value)) return 'N/A';
+        return (Number(value) * 100).toFixed(digits) + '%';
+    }
+
+    function fixed(value, digits = 3) {
+        if (value === null || value === undefined || Number.isNaN(value)) return 'N/A';
+        return Number(value).toFixed(digits);
+    }
+
+    function ciPct(interval) {
+        if (!interval || interval.low === null || interval.high === null) return 'N/A';
+        return `${pct(interval.low)} to ${pct(interval.high)}`;
+    }
+
+    function setText(id, value) {
+        document.getElementById(id).textContent = value;
+    }
+
+    function emptyRow(colspan, label) {
+        return `<tr><td colspan="${colspan}" class="text-center text-muted">${label}</td></tr>`;
+    }
+
+    function renderEvaluation(data) {
+        const evaluation = data.evaluation;
+        if (!evaluation) {
+            alert('The evaluation response did not include statistical metrics.');
             return;
         }
 
-        // 1. Build Multi-Class Confusion Matrix
-        let matrix = {};
-        classesList.forEach(c1 => {
-            matrix[c1] = {};
-            classesList.forEach(c2 => matrix[c1][c2] = 0);
-        });
+        currentReport = data;
+        globalResults = data.results || [];
 
-        let binaryTP = 0, binaryTN = 0, binaryFP = 0, binaryFN = 0;
-        let overallCorrect = 0;
+        setText('data-note', evaluation.data_note);
+        setText('report-total', evaluation.total);
+        setText('report-correct', `${evaluation.correct} correct, ${evaluation.wrong} wrong`);
+        setText('report-accuracy', pct(evaluation.overall_accuracy));
+        setText('report-accuracy-ci', `95% CI: ${ciPct(evaluation.overall_accuracy_ci_95)}`);
+        setText('report-macro-f1', pct(evaluation.averages.macro_f1));
+        setText('report-macro-f1-ci', `Bootstrap 95% CI: ${ciPct(evaluation.bootstrap.macro_f1_ci_95)}`);
+        setText('report-weighted-f1', pct(evaluation.averages.weighted_f1));
+        setText('report-weighted-f1-ci', `Bootstrap 95% CI: ${ciPct(evaluation.bootstrap.weighted_f1_ci_95)}`);
+        setText('report-balanced', pct(evaluation.averages.balanced_accuracy));
+        setText('report-ece', pct(evaluation.calibration.expected_calibration_error));
 
-        globalResults.forEach(res => {
-            // Populate NxN matrix
-            matrix[res.expected][res.prediction]++;
+        renderConfusionMatrix(evaluation);
+        renderPerClass(evaluation.per_class);
+        renderAverages(evaluation.averages);
+        renderBinaryMetrics(evaluation.binary);
+        renderCalibration(evaluation.calibration);
+        renderThresholds(evaluation.confidence_thresholds);
+        renderErrorAnalysis(evaluation.error_analysis);
+        renderEnvironmental(evaluation.environmental);
 
-            // Overall specific multi-class correctness
-            if (res.expected === res.prediction) overallCorrect++;
+        document.getElementById('test-results').classList.remove('hidden');
+        document.getElementById('export-report-btn').disabled = false;
+    }
 
-            // Populate Binary Matrix (Disease vs Healthy)
-            let actualIsDisease = res.expected !== "Healthy";
-            let predictedIsDisease = res.status === "Diseased";
-
-            if (actualIsDisease) {
-                if (predictedIsDisease) binaryTP++; else binaryFN++;
-            } else {
-                if (predictedIsDisease) binaryFP++; else binaryTN++;
-            }
-        });
-
-        // 2. Render Multi-Class Matrix Table
-        let thead = '<tr><th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left;">Actual \\ Predicted</th>';
-        classesList.forEach(c => {
-            thead += `<th style="background: #f4f9f0; padding: 16px 12px; border: 1px solid #e4ecdf; font-size: 13px;">${c}</th>`;
+    function renderConfusionMatrix(evaluation) {
+        let thead = '<tr><th>Actual \\ Predicted</th>';
+        classesList.forEach(className => {
+            thead += `<th>${escapeHtml(className)}</th>`;
         });
         thead += '</tr>';
         document.getElementById('mc-thead').innerHTML = thead;
 
         let tbody = '';
         classesList.forEach(actual => {
-            tbody += `<tr><th style="background: #f4f9f0; padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left; font-size: 13px;">${actual}</th>`;
+            tbody += `<tr><th>${escapeHtml(actual)}</th>`;
             classesList.forEach(predicted => {
-                let count = matrix[actual][predicted];
-                let isDiag = (actual === predicted);
-
-                let bg = '#ffffff';
-                let color = '#aaa';
-                let fw = 'normal';
-
-                if (count > 0) {
-                    if (isDiag) { bg = '#eaf5e6'; color = '#2f7d32'; fw = 'bold'; }
-                    else { bg = '#fbeded'; color = '#b42318'; fw = 'bold'; }
-                }
-
-                tbody += `<td style="background-color: ${bg}; color: ${color}; font-weight: ${fw}; text-align: center; border: 1px solid #e4ecdf; padding: 16px;">${count}</td>`;
+                const count = evaluation.confusion_matrix[actual][predicted];
+                const className = actual === predicted && count > 0 ? 'matrix-hit' : (count > 0 ? 'matrix-miss' : '');
+                tbody += `<td class="${className}">${count}</td>`;
             });
             tbody += '</tr>';
         });
         document.getElementById('mc-tbody').innerHTML = tbody;
+    }
 
-        // 3. Render Per-Class Metrics
-        let perClassHtml = '';
-        classesList.forEach(cls => {
-            let tp = matrix[cls][cls];
-            let fn = 0;
-            let fp = 0;
-            let totalInstances = 0;
+    function renderPerClass(rows) {
+        const html = rows.map(row => `
+            <tr>
+                <td class="fw-bold">${escapeHtml(row.class_name)}</td>
+                <td>${row.support}</td>
+                <td>${row.predicted}</td>
+                <td>${pct(row.precision)}</td>
+                <td>${pct(row.recall)}</td>
+                <td>${ciPct(row.recall_ci_95)}</td>
+                <td>${pct(row.specificity)}</td>
+                <td>${pct(row.f1)}</td>
+            </tr>
+        `).join('');
+        document.getElementById('per-class-tbody').innerHTML = html || emptyRow(8, 'No class metrics available.');
+    }
 
-            classesList.forEach(r => {
-                classesList.forEach(c => {
-                    totalInstances += matrix[r][c];
-                });
-            });
+    function renderAverages(averages) {
+        document.getElementById('averages-tbody').innerHTML = `
+            <tr>
+                <td class="fw-bold">Macro</td>
+                <td>${pct(averages.macro_precision)}</td>
+                <td>${pct(averages.macro_recall)}</td>
+                <td>${pct(averages.macro_specificity)}</td>
+                <td>${pct(averages.macro_f1)}</td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Weighted</td>
+                <td>${pct(averages.weighted_precision)}</td>
+                <td>${pct(averages.weighted_recall)}</td>
+                <td>${pct(averages.weighted_specificity)}</td>
+                <td>${pct(averages.weighted_f1)}</td>
+            </tr>
+        `;
+    }
 
-            classesList.forEach(other => {
-                if (other !== cls) {
-                    fn += matrix[cls][other];
-                    fp += matrix[other][cls];
-                }
-            });
-            
-            let tn = totalInstances - (tp + fp + fn);
+    function renderBinaryMetrics(binary) {
+        document.getElementById('binary-tbody').innerHTML = `
+            <tr>
+                <td>${pct(binary.accuracy)}</td>
+                <td>${pct(binary.sensitivity)}</td>
+                <td>${pct(binary.specificity)}</td>
+                <td>${pct(binary.precision)}</td>
+                <td>${pct(binary.false_positive_rate)}</td>
+                <td>${pct(binary.false_negative_rate)}</td>
+                <td>${pct(binary.f1)}</td>
+                <td>${fixed(binary.roc_auc)}</td>
+                <td>${fixed(binary.pr_auc)}</td>
+                <td>${fixed(binary.brier_score)}</td>
+            </tr>
+        `;
 
-            let accuracy = totalInstances > 0 ? ((tp + tn) / totalInstances) : 0;
-            let precision = (tp + fp) > 0 ? (tp / (tp + fp)) : 0;
-            let recall = (tp + fn) > 0 ? (tp / (tp + fn)) : 0;
-            let f1 = (precision + recall) > 0 ? 2 * ((precision * recall) / (precision + recall)) : 0;
+        const counts = binary.counts;
+        setText(
+            'binary-counts',
+            `TP ${counts.true_positive}, TN ${counts.true_negative}, FP ${counts.false_positive}, FN ${counts.false_negative}`
+        );
+    }
 
-            // Only show classes that were actually tested or predicted
-            if ((tp + fn + fp) > 0) {
-                perClassHtml += `
+    function renderCalibration(calibration) {
+        const rows = calibration.bins
+            .filter(row => row.count > 0)
+            .map(row => `
                 <tr>
-                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf; text-align: left; font-weight: bold; color: #385038;">${cls}</td>
-                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(accuracy * 100).toFixed(1)}%</td>
-                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(precision * 100).toFixed(1)}%</td>
-                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf;">${(recall * 100).toFixed(1)}%</td>
-                    <td style="padding: 16px 20px; border: 1px solid #e4ecdf; font-weight: bold;">${(f1 * 100).toFixed(1)}%</td>
-                </tr>`;
-            }
-        });
-        document.getElementById('per-class-tbody').innerHTML = perClassHtml || '<tr><td colspan="4" style="padding: 20px;">No data evaluated yet.</td></tr>';
+                    <td>${escapeHtml(row.label)}</td>
+                    <td>${row.count}</td>
+                    <td>${pct(row.accuracy)}</td>
+                    <td>${pct(row.avg_confidence)}</td>
+                    <td>${pct(row.gap)}</td>
+                </tr>
+            `).join('');
+        document.getElementById('calibration-tbody').innerHTML = rows || emptyRow(5, 'No calibration bins available.');
+        setText(
+            'calibration-summary',
+            `Multiclass Brier ${fixed(calibration.brier_score_multiclass)}. Mean confidence: correct ${pct(calibration.mean_confidence_correct)}, incorrect ${pct(calibration.mean_confidence_incorrect)}.`
+        );
+    }
 
-        // 4. Update Binary Metrics
-        const total = globalResults.length;
-        const binAccuracy = total > 0 ? ((binaryTP + binaryTN) / total * 100) : 0;
-        const binPrecision = (binaryTP + binaryFP) > 0 ? (binaryTP / (binaryTP + binaryFP) * 100) : 0;
-        const binRecall = (binaryTP + binaryFN) > 0 ? (binaryTP / (binaryTP + binaryFN) * 100) : 0;
-        const binFpr = (binaryFP + binaryTN) > 0 ? (binaryFP / (binaryFP + binaryTN) * 100) : 0;
+    function renderThresholds(rows) {
+        document.getElementById('threshold-tbody').innerHTML = rows.map(row => `
+            <tr>
+                <td>${pct(row.threshold, 0)}</td>
+                <td>${row.accepted}</td>
+                <td>${row.rejected}</td>
+                <td>${pct(row.coverage)}</td>
+                <td>${pct(row.accuracy)}</td>
+                <td>${row.errors}</td>
+            </tr>
+        `).join('');
+    }
 
-        // Overall exact multi-class accuracy
-        const mcAccuracy = total > 0 ? (overallCorrect / total * 100) : 0;
+    function recordRows(records, mode) {
+        if (!records || records.length === 0) return emptyRow(4, 'None found.');
+        return records.map(row => `
+            <tr>
+                <td class="filename-cell" title="${escapeHtml(row.filename)}">${escapeHtml(row.filename)}</td>
+                <td>${escapeHtml(row.expected)}</td>
+                <td>${escapeHtml(row.prediction)}</td>
+                <td>${mode === 'margin' ? fixed(row.top2_margin) : pct(row.confidence)}</td>
+            </tr>
+        `).join('');
+    }
 
-        document.getElementById('metric-accuracy').textContent = mcAccuracy.toFixed(1) + '%';
-        document.getElementById('metric-precision').textContent = binPrecision.toFixed(1) + '%';
-        document.getElementById('metric-recall').textContent = binRecall.toFixed(1) + '%';
-        document.getElementById('metric-fpr').textContent = binFpr.toFixed(1) + '%';
+    function renderErrorAnalysis(errorAnalysis) {
+        document.getElementById('confusions-tbody').innerHTML = errorAnalysis.top_confusions.length
+            ? errorAnalysis.top_confusions.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.expected)}</td>
+                    <td>${escapeHtml(row.prediction)}</td>
+                    <td>${row.count}</td>
+                </tr>
+            `).join('')
+            : emptyRow(3, 'No misclassifications.');
 
-        document.getElementById('test-results').classList.remove('hidden');
+        document.getElementById('close-calls-tbody').innerHTML = recordRows(errorAnalysis.close_calls, 'margin');
+        document.getElementById('high-errors-tbody').innerHTML = recordRows(errorAnalysis.high_confidence_errors, 'confidence');
+        document.getElementById('low-correct-tbody').innerHTML = recordRows(errorAnalysis.low_confidence_correct, 'confidence');
+        setText(
+            'margin-summary',
+            `Mean top-2 margin: correct ${fixed(errorAnalysis.mean_margin_correct)}, incorrect ${fixed(errorAnalysis.mean_margin_incorrect)}.`
+        );
+    }
+
+    function renderEnvironmental(environmental) {
+        const section = document.getElementById('environment-section');
+        const content = document.getElementById('environment-content');
+
+        if (!environmental || !environmental.available) {
+            section.classList.add('hidden');
+            content.innerHTML = '';
+            return;
+        }
+
+        section.classList.remove('hidden');
+        content.innerHTML = ['temperature', 'humidity'].map(key => {
+            const variable = environmental.variables[key];
+            if (!variable || !variable.available) return '';
+            const title = key === 'temperature' ? 'Temperature' : 'Humidity';
+            const trend = variable.logistic_error_trend;
+            const trendText = trend
+                ? `Error odds ratio per SD ${fixed(trend.odds_ratio_per_sd)}, p=${fixed(trend.p_value)}`
+                : 'Error trend unavailable';
+            const rows = variable.bins.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.bin)}</td>
+                    <td>${fixed(row.low, 1)} to ${fixed(row.high, 1)}</td>
+                    <td>${row.count}</td>
+                    <td>${pct(row.accuracy)}</td>
+                    <td>${pct(row.avg_confidence)}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div>
+                    <h4>${title}</h4>
+                    <table class="premium-table evaluation-table compact-table">
+                        <thead>
+                            <tr><th>Bin</th><th>Range</th><th>Count</th><th>Accuracy</th><th>Confidence</th></tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <p class="text-muted report-footnote">
+                        Error correlation ${fixed(variable.error_correlation)}, confidence correlation ${fixed(variable.confidence_correlation)}. ${trendText}.
+                    </p>
+                </div>
+            `;
+        }).join('');
     }
 
     document.getElementById('reset-stats-btn').addEventListener('click', () => {
+        currentReport = null;
         globalResults = [];
-        updateMetricsUI();
-        document.querySelectorAll('.class-upload').forEach(input => input.value = "");
+        document.getElementById('test-results').classList.add('hidden');
+        document.getElementById('export-report-btn').disabled = true;
+        document.querySelectorAll('.class-upload').forEach(input => input.value = '');
+    });
+
+    document.getElementById('export-report-btn').addEventListener('click', () => {
+        if (!currentReport) return;
+
+        const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        link.href = url;
+        link.download = `banana-model-evaluation-${timestamp}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     });
 
     document.getElementById('run-test-btn').addEventListener('click', () => {
@@ -269,19 +728,19 @@
                 hasFiles = true;
                 const clsName = input.getAttribute('data-cls');
                 for (let i = 0; i < input.files.length; i++) {
-                    // Send to backend with key: images_Class_Name
                     formData.append('images_' + clsName, input.files[i]);
                 }
             }
         });
 
         if (!hasFiles) {
-            alert("Please upload at least some images for any class to evaluate.");
+            alert('Please upload at least one labeled image to evaluate.');
             return;
         }
 
         const btn = document.getElementById('run-test-btn');
         btn.disabled = true;
+        document.getElementById('export-report-btn').disabled = true;
         document.getElementById('test-loading').classList.remove('hidden');
 
         fetch('/api/evaluate', {
@@ -294,18 +753,16 @@
                 document.getElementById('test-loading').classList.add('hidden');
 
                 if (data.error) {
-                    alert("Error: " + data.error);
+                    alert('Error: ' + data.error);
                     return;
                 }
 
-                // Append new results to global accumulator
-                globalResults = globalResults.concat(data.results);
-                updateMetricsUI();
+                renderEvaluation(data);
             })
             .catch(err => {
                 btn.disabled = false;
                 document.getElementById('test-loading').classList.add('hidden');
-                alert("Error running evaluation");
+                alert('Error running evaluation');
                 console.error(err);
             });
     });
