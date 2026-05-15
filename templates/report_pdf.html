@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Banana Model Evaluation Report {{ report.run_id }}</title>
+    <style>
+        :root {
+            --panel-bg: #ffffff;
+            --panel-border: #e5e7eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --success: #059669;
+            --success-light: #ecfdf5;
+            --danger: #dc2626;
+            --danger-light: #fef2f2;
+            --warning-light: #fffbeb;
+            --radius: 8px;
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f9fafb;
+            color: var(--text-main);
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .testing-container {
+            width: 100%;
+            padding: 14px;
+            background: var(--panel-bg);
+        }
+
+        .widget-header {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .widget-header h2 {
+            margin: 0 0 4px;
+            font-size: 22px;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .evaluation-report {
+            margin-top: 10px;
+        }
+
+        .report-section {
+            padding-top: 14px;
+            margin-top: 14px;
+            border-top: 1px solid var(--panel-border);
+            break-inside: avoid;
+        }
+
+        .report-section:first-child {
+            border-top: none;
+            margin-top: 0;
+        }
+
+        .report-note {
+            padding: 10px;
+            background: var(--primary-light);
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius);
+            color: #1e3a8a;
+        }
+
+        .section-heading {
+            margin-bottom: 8px;
+        }
+
+        .section-heading h3 {
+            margin: 0 0 3px;
+            color: var(--text-main);
+            font-size: 16px;
+        }
+
+        .section-heading h4,
+        .report-columns h4 {
+            margin: 0 0 6px;
+            color: var(--text-main);
+            font-size: 13px;
+        }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .report-stat {
+            min-height: 118px;
+            padding: 10px;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            background: #ffffff;
+        }
+
+        .report-stat span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .report-stat strong {
+            display: block;
+            margin-top: 4px;
+            color: var(--primary);
+            font-size: 22px;
+        }
+
+        .report-stat small,
+        .report-footnote {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .report-stat p {
+            margin: 7px 0 0;
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .analysis-guide {
+            margin-top: 8px;
+            padding: 9px;
+            border: 1px solid #dbeafe;
+            border-radius: var(--radius);
+            background: #f8fbff;
+            break-inside: avoid;
+        }
+
+        .analysis-guide h4 {
+            margin: 0 0 6px;
+            color: #1e3a8a;
+            font-size: 12px;
+        }
+
+        .analysis-guide dl {
+            display: grid;
+            grid-template-columns: minmax(120px, 0.32fr) 1fr;
+            gap: 4px 10px;
+            margin: 0;
+        }
+
+        .analysis-guide dt {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .analysis-guide dd {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .analysis-warning {
+            margin: 8px 0 0;
+            color: #92400e;
+            font-size: 10px;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow: visible;
+        }
+
+        .premium-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+        }
+
+        .premium-table th,
+        .premium-table td {
+            padding: 6px 7px;
+            text-align: center;
+            border: 1px solid var(--panel-border);
+            font-size: 9px;
+            vertical-align: top;
+        }
+
+        .premium-table th {
+            color: var(--text-muted);
+            font-weight: 700;
+            background: #f9fafb;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .premium-table th:first-child,
+        .premium-table td:first-child {
+            text-align: left;
+        }
+
+        .matrix-hit {
+            background: var(--success-light);
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .matrix-miss {
+            background: var(--danger-light);
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .report-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .report-subsection {
+            margin-top: 10px;
+        }
+
+        .filename-cell {
+            max-width: 160px;
+            overflow-wrap: anywhere;
+        }
+
+        .fw-bold {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="testing-container">
+        <div class="widget-header">
+            <h2>Multi-Class Model Evaluation</h2>
+            <p class="text-muted">Research-ready validation report generated from labeled holdout images.</p>
+            <p class="text-muted">Report ID: {{ report.run_id }} | Generated: {{ evaluation.generated_at }}</p>
+        </div>
+
+        <div class="evaluation-report">
+            <div class="report-section report-note">
+                <strong>Validation note:</strong>
+                <span>{{ evaluation.data_note }}</span>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Statistical Summary</h3>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What these readings mean</h4>
+                    <dl>
+                        <dt>Total Images</dt>
+                        <dd>How many labeled test images were included in the evaluation.</dd>
+                        <dt>Overall Accuracy</dt>
+                        <dd>The percentage of all uploaded test images that the model classified correctly.</dd>
+                        <dt>Macro F1</dt>
+                        <dd>The average F1 score across classes where every class counts equally.</dd>
+                        <dt>Weighted F1</dt>
+                        <dd>The F1 score averaged by class size, so classes with more test images have more influence.</dd>
+                        <dt>Balanced Accuracy</dt>
+                        <dd>The average recall across classes, useful when the test set is not evenly balanced.</dd>
+                        <dt>Calibration Error</dt>
+                        <dd>How far the model's confidence is from its actual correctness. Lower is better.</dd>
+                    </dl>
+                </div>
+                <div class="report-grid">
+                    <div class="report-stat">
+                        <span>Total Images</span>
+                        <strong>{{ evaluation.total }}</strong>
+                        <small>{{ evaluation.correct }} correct, {{ evaluation.wrong }} wrong</small>
+                        <p>Number of labeled test images included in this evaluation. More images make the result more reliable.</p>
+                    </div>
+                    <div class="report-stat">
+                        <span>Overall Accuracy</span>
+                        <strong>{{ pct(evaluation.overall_accuracy) }}</strong>
+                        <small>95% CI: {{ ci(evaluation.overall_accuracy_ci_95) }}</small>
+                        <p>Percentage of all test images classified correctly. The confidence interval shows the likely range of the true accuracy.</p>
+                    </div>
+                    <div class="report-stat">
+                        <span>Macro F1</span>
+                        <strong>{{ pct(evaluation.averages.macro_f1) }}</strong>
+                        <small>Bootstrap 95% CI: {{ ci(evaluation.bootstrap.macro_f1_ci_95) }}</small>
+                        <p>Average F1 score across classes, giving every disease class equal weight even when the test set is imbalanced.</p>
+                    </div>
+                    <div class="report-stat">
+                        <span>Weighted F1</span>
+                        <strong>{{ pct(evaluation.averages.weighted_f1) }}</strong>
+                        <small>Bootstrap 95% CI: {{ ci(evaluation.bootstrap.weighted_f1_ci_95) }}</small>
+                        <p>F1 score adjusted by how many images each class has. Large classes influence this reading more.</p>
+                    </div>
+                    <div class="report-stat">
+                        <span>Balanced Accuracy</span>
+                        <strong>{{ pct(evaluation.averages.balanced_accuracy) }}</strong>
+                        <small>Macro recall across supported classes</small>
+                        <p>Shows how well the model detects each class on average. Useful when some diseases have fewer examples.</p>
+                    </div>
+                    <div class="report-stat">
+                        <span>Calibration Error</span>
+                        <strong>{{ pct(evaluation.calibration.expected_calibration_error) }}</strong>
+                        <small>Expected calibration error</small>
+                        <p>Measures whether confidence matches correctness. Lower values mean the confidence scores are more trustworthy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Multi-Class Confusion Matrix</h3>
+                    <p class="text-muted">Rows are actual labels; columns are model predictions.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Actual \ Predicted</th>
+                                {% for cls in classes %}
+                                <th>{{ cls }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for actual in classes %}
+                            <tr>
+                                <th>{{ actual }}</th>
+                                {% for predicted in classes %}
+                                {% set count = evaluation.confusion_matrix[actual][predicted] %}
+                                <td class="{% if actual == predicted and count > 0 %}matrix-hit{% elif count > 0 %}matrix-miss{% endif %}">{{ count }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What this table means</h4>
+                    <dl>
+                        <dt>Actual \ Predicted</dt>
+                        <dd>Each row is the true label chosen during upload; each column is the class predicted by the model.</dd>
+                        <dt>Diagonal cells</dt>
+                        <dd>Correct predictions where the actual class and predicted class match.</dd>
+                        <dt>Off-diagonal cells</dt>
+                        <dd>Misclassifications showing which diseases were confused with another class.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Per-Class Performance</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Support</th>
+                                <th>Predicted</th>
+                                <th>Precision</th>
+                                <th>Recall</th>
+                                <th>Recall 95% CI</th>
+                                <th>Specificity</th>
+                                <th>F1</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in evaluation.per_class %}
+                            <tr>
+                                <td class="fw-bold">{{ row.class_name }}</td>
+                                <td>{{ row.support }}</td>
+                                <td>{{ row.predicted }}</td>
+                                <td>{{ pct(row.precision) }}</td>
+                                <td>{{ pct(row.recall) }}</td>
+                                <td>{{ ci(row.recall_ci_95) }}</td>
+                                <td>{{ pct(row.specificity) }}</td>
+                                <td>{{ pct(row.f1) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Class</dt>
+                        <dd>The banana disease or healthy category being evaluated.</dd>
+                        <dt>Support</dt>
+                        <dd>Number of test images uploaded with this class as the true label.</dd>
+                        <dt>Predicted</dt>
+                        <dd>Number of images the model predicted as this class, regardless of the true label.</dd>
+                        <dt>Precision</dt>
+                        <dd>When the model predicted this class, how often it was correct.</dd>
+                        <dt>Recall</dt>
+                        <dd>Out of all images truly belonging to this class, how many the model detected.</dd>
+                        <dt>Recall 95% CI</dt>
+                        <dd>The uncertainty range for recall. Wider intervals usually mean fewer test images.</dd>
+                        <dt>Specificity</dt>
+                        <dd>How well the model avoids falsely labeling other classes as this class.</dd>
+                        <dt>F1</dt>
+                        <dd>A combined score balancing precision and recall.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Macro And Weighted Averages</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Average</th>
+                                <th>Precision</th>
+                                <th>Recall</th>
+                                <th>Specificity</th>
+                                <th>F1</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold">Macro</td>
+                                <td>{{ pct(evaluation.averages.macro_precision) }}</td>
+                                <td>{{ pct(evaluation.averages.macro_recall) }}</td>
+                                <td>{{ pct(evaluation.averages.macro_specificity) }}</td>
+                                <td>{{ pct(evaluation.averages.macro_f1) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Weighted</td>
+                                <td>{{ pct(evaluation.averages.weighted_precision) }}</td>
+                                <td>{{ pct(evaluation.averages.weighted_recall) }}</td>
+                                <td>{{ pct(evaluation.averages.weighted_specificity) }}</td>
+                                <td>{{ pct(evaluation.averages.weighted_f1) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Average</dt>
+                        <dd>Macro treats every class equally; weighted gives larger classes more influence.</dd>
+                        <dt>Precision</dt>
+                        <dd>Average correctness when the model predicts a class.</dd>
+                        <dt>Recall</dt>
+                        <dd>Average ability to find the true class.</dd>
+                        <dt>Specificity</dt>
+                        <dd>Average ability to avoid false alarms for each class.</dd>
+                        <dt>F1</dt>
+                        <dd>Average balance between precision and recall.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Healthy Vs Diseased Screening</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Accuracy</th>
+                                <th>Sensitivity</th>
+                                <th>Specificity</th>
+                                <th>Precision</th>
+                                <th>FPR</th>
+                                <th>FNR</th>
+                                <th>F1</th>
+                                <th>ROC-AUC</th>
+                                <th>PR-AUC</th>
+                                <th>Brier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ pct(evaluation.binary.accuracy) }}</td>
+                                <td>{{ pct(evaluation.binary.sensitivity) }}</td>
+                                <td>{{ pct(evaluation.binary.specificity) }}</td>
+                                <td>{{ pct(evaluation.binary.precision) }}</td>
+                                <td>{{ pct(evaluation.binary.false_positive_rate) }}</td>
+                                <td>{{ pct(evaluation.binary.false_negative_rate) }}</td>
+                                <td>{{ pct(evaluation.binary.f1) }}</td>
+                                <td>{{ fixed(evaluation.binary.roc_auc) }}</td>
+                                <td>{{ fixed(evaluation.binary.pr_auc) }}</td>
+                                <td>{{ fixed(evaluation.binary.brier_score) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted report-footnote">
+                    TP {{ evaluation.binary.counts.true_positive }},
+                    TN {{ evaluation.binary.counts.true_negative }},
+                    FP {{ evaluation.binary.counts.false_positive }},
+                    FN {{ evaluation.binary.counts.false_negative }}
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Accuracy</dt>
+                        <dd>Overall correctness when reducing the model to Healthy versus Diseased.</dd>
+                        <dt>Sensitivity</dt>
+                        <dd>How many truly diseased leaves were detected as diseased. Also called recall.</dd>
+                        <dt>Specificity</dt>
+                        <dd>How many truly healthy leaves were correctly kept as healthy.</dd>
+                        <dt>Precision</dt>
+                        <dd>When the model says diseased, how often it is actually diseased.</dd>
+                        <dt>FPR</dt>
+                        <dd>False positive rate: healthy leaves incorrectly flagged as diseased.</dd>
+                        <dt>FNR</dt>
+                        <dd>False negative rate: diseased leaves incorrectly missed as healthy.</dd>
+                        <dt>F1</dt>
+                        <dd>Balance between diseased precision and diseased sensitivity.</dd>
+                        <dt>ROC-AUC</dt>
+                        <dd>How well the model separates healthy from diseased across thresholds. Higher is better.</dd>
+                        <dt>PR-AUC</dt>
+                        <dd>Precision-recall area for diseased detection, useful when healthy and diseased counts are imbalanced.</dd>
+                        <dt>Brier</dt>
+                        <dd>Probability error for Healthy versus Diseased confidence. Lower is better.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Calibration</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Confidence Bin</th>
+                                <th>Count</th>
+                                <th>Accuracy</th>
+                                <th>Avg Confidence</th>
+                                <th>Gap</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in evaluation.calibration.bins if row.count > 0 %}
+                            <tr>
+                                <td>{{ row.label }}</td>
+                                <td>{{ row.count }}</td>
+                                <td>{{ pct(row.accuracy) }}</td>
+                                <td>{{ pct(row.avg_confidence) }}</td>
+                                <td>{{ pct(row.gap) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted report-footnote">
+                    Multiclass Brier {{ fixed(evaluation.calibration.brier_score_multiclass) }}.
+                    Mean confidence: correct {{ pct(evaluation.calibration.mean_confidence_correct) }},
+                    incorrect {{ pct(evaluation.calibration.mean_confidence_incorrect) }}.
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Confidence Bin</dt>
+                        <dd>The prediction confidence range, such as 0.7 to 0.8.</dd>
+                        <dt>Count</dt>
+                        <dd>Number of predictions that landed in that confidence range.</dd>
+                        <dt>Accuracy</dt>
+                        <dd>How many predictions in the bin were actually correct.</dd>
+                        <dt>Avg Confidence</dt>
+                        <dd>The average confidence score for predictions in the bin.</dd>
+                        <dt>Gap</dt>
+                        <dd>The difference between accuracy and confidence. Smaller gaps mean better calibrated confidence.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Confidence Thresholds</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Threshold</th>
+                                <th>Accepted</th>
+                                <th>Rejected</th>
+                                <th>Coverage</th>
+                                <th>Accepted Accuracy</th>
+                                <th>Accepted Errors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in evaluation.confidence_thresholds %}
+                            <tr>
+                                <td>{{ pct(row.threshold, 0) }}</td>
+                                <td>{{ row.accepted }}</td>
+                                <td>{{ row.rejected }}</td>
+                                <td>{{ pct(row.coverage) }}</td>
+                                <td>{{ pct(row.accuracy) }}</td>
+                                <td>{{ row.errors }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Threshold</dt>
+                        <dd>The minimum confidence required before accepting a prediction.</dd>
+                        <dt>Accepted</dt>
+                        <dd>Number of predictions at or above that threshold.</dd>
+                        <dt>Rejected</dt>
+                        <dd>Number of predictions below that threshold that would need review.</dd>
+                        <dt>Coverage</dt>
+                        <dd>Percentage of all predictions that would be accepted automatically.</dd>
+                        <dt>Accepted Accuracy</dt>
+                        <dd>Accuracy among only the accepted predictions.</dd>
+                        <dt>Accepted Errors</dt>
+                        <dd>Number of wrong predictions that would still pass the threshold.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Error Analysis</h3>
+                </div>
+                <div class="report-columns">
+                    <div>
+                        <h4>Top Confusion Pairs</h4>
+                        <table class="premium-table evaluation-table compact-table">
+                            <thead>
+                                <tr><th>Actual</th><th>Predicted</th><th>Count</th></tr>
+                            </thead>
+                            <tbody>
+                                {% if evaluation.error_analysis.top_confusions %}
+                                    {% for row in evaluation.error_analysis.top_confusions %}
+                                    <tr>
+                                        <td>{{ row.expected }}</td>
+                                        <td>{{ row.prediction }}</td>
+                                        <td>{{ row.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="3">No misclassifications.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4>Closest Top-2 Margins</h4>
+                        <table class="premium-table evaluation-table compact-table">
+                            <thead>
+                                <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Margin</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for row in evaluation.error_analysis.close_calls %}
+                                <tr>
+                                    <td class="filename-cell">{{ row.filename }}</td>
+                                    <td>{{ row.expected }}</td>
+                                    <td>{{ row.prediction }}</td>
+                                    <td>{{ fixed(row.top2_margin) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="report-columns report-subsection">
+                    <div>
+                        <h4>High-Confidence Errors</h4>
+                        <table class="premium-table evaluation-table compact-table">
+                            <thead>
+                                <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Confidence</th></tr>
+                            </thead>
+                            <tbody>
+                                {% if evaluation.error_analysis.high_confidence_errors %}
+                                    {% for row in evaluation.error_analysis.high_confidence_errors %}
+                                    <tr>
+                                        <td class="filename-cell">{{ row.filename }}</td>
+                                        <td>{{ row.expected }}</td>
+                                        <td>{{ row.prediction }}</td>
+                                        <td>{{ pct(row.confidence) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="4">None found.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4>Low-Confidence Correct</h4>
+                        <table class="premium-table evaluation-table compact-table">
+                            <thead>
+                                <tr><th>File</th><th>Actual</th><th>Predicted</th><th>Confidence</th></tr>
+                            </thead>
+                            <tbody>
+                                {% if evaluation.error_analysis.low_confidence_correct %}
+                                    {% for row in evaluation.error_analysis.low_confidence_correct %}
+                                    <tr>
+                                        <td class="filename-cell">{{ row.filename }}</td>
+                                        <td>{{ row.expected }}</td>
+                                        <td>{{ row.prediction }}</td>
+                                        <td>{{ pct(row.confidence) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="4">None found.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="text-muted report-footnote">
+                    Mean top-2 margin: correct {{ fixed(evaluation.error_analysis.mean_margin_correct) }},
+                    incorrect {{ fixed(evaluation.error_analysis.mean_margin_incorrect) }}.
+                </div>
+                <div class="analysis-guide">
+                    <h4>What these tables mean</h4>
+                    <dl>
+                        <dt>Top Confusion Pairs</dt>
+                        <dd>Shows the most common actual-to-predicted mistakes and how often each happened.</dd>
+                        <dt>Closest Top-2 Margins</dt>
+                        <dd>Shows predictions where the best and second-best classes were close, meaning the model was less certain.</dd>
+                        <dt>High-Confidence Errors</dt>
+                        <dd>Wrong predictions where the model was very confident. These are important to inspect.</dd>
+                        <dt>Low-Confidence Correct</dt>
+                        <dd>Correct predictions where the model was unsure. These may need a lower-confidence review workflow.</dd>
+                        <dt>Margin</dt>
+                        <dd>The difference between the top predicted probability and the second-highest probability.</dd>
+                        <dt>Confidence</dt>
+                        <dd>The probability score assigned to the predicted class.</dd>
+                    </dl>
+                </div>
+            </div>
+
+            {% if evaluation.environmental.available %}
+            <div class="report-section">
+                <div class="section-heading">
+                    <h3>Environmental Metadata</h3>
+                </div>
+                <div class="analysis-guide">
+                    <h4>What each column means</h4>
+                    <dl>
+                        <dt>Bin</dt>
+                        <dd>Low, Mid, or High range of temperature or humidity values from the filenames.</dd>
+                        <dt>Range</dt>
+                        <dd>The actual sensor-value range covered by that bin.</dd>
+                        <dt>Count</dt>
+                        <dd>Number of labeled test images in that temperature or humidity bin.</dd>
+                        <dt>Accuracy</dt>
+                        <dd>Correct predictions divided by total images in that environmental bin.</dd>
+                        <dt>Confidence</dt>
+                        <dd>Average model confidence for images in that bin.</dd>
+                        <dt>Error correlation</dt>
+                        <dd>Exploratory correlation between the sensor value and whether the model was wrong.</dd>
+                        <dt>Confidence correlation</dt>
+                        <dd>Exploratory correlation between the sensor value and model confidence.</dd>
+                        <dt>Error odds ratio</dt>
+                        <dd>Exploratory logistic trend. Values above 1 suggest errors rise as the sensor value rises.</dd>
+                    </dl>
+                    <p class="analysis-warning">This section is exploratory only. It does not prove that temperature or humidity caused model errors.</p>
+                </div>
+                <div class="report-columns">
+                    {% for key, variable in evaluation.environmental.variables.items() if variable.available %}
+                    <div>
+                        <h4>{{ key|title }}</h4>
+                        <table class="premium-table evaluation-table compact-table">
+                            <thead>
+                                <tr><th>Bin</th><th>Range</th><th>Count</th><th>Accuracy</th><th>Confidence</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for row in variable.bins %}
+                                <tr>
+                                    <td>{{ row.bin }}</td>
+                                    <td>{{ fixed(row.low, 1) }} to {{ fixed(row.high, 1) }}</td>
+                                    <td>{{ row.count }}</td>
+                                    <td>{{ pct(row.accuracy) }}</td>
+                                    <td>{{ pct(row.avg_confidence) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <p class="text-muted report-footnote">
+                            Error correlation {{ fixed(variable.error_correlation) }},
+                            confidence correlation {{ fixed(variable.confidence_correlation) }}.
+                            {% if variable.logistic_error_trend %}
+                            Error odds ratio per SD {{ fixed(variable.logistic_error_trend.odds_ratio_per_sd) }},
+                            p={{ fixed(variable.logistic_error_trend.p_value) }}.
+                            {% else %}
+                            Error trend unavailable.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

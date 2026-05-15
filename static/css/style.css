@@ -4,21 +4,21 @@
     --panel-border: #e5e7eb;
     --text-main: #111827;
     --text-muted: #6b7280;
-    
+
     --primary: #2563eb;
     --primary-hover: #1d4ed8;
     --primary-light: #eff6ff;
-    
+
     --success: #059669;
     --success-hover: #047857;
     --success-light: #ecfdf5;
-    
+
     --danger: #dc2626;
     --danger-light: #fef2f2;
-    
+
     --warning: #d97706;
     --warning-light: #fffbeb;
-    
+
     --sidebar-width: 260px;
     --transition: all 0.2s ease;
     --radius: 8px;
@@ -430,8 +430,8 @@ body {
     color: var(--text-main);
 }
 
-.primary-btn:hover { 
-    background: #f3f4f6; 
+.primary-btn:hover {
+    background: #f3f4f6;
 }
 
 .success-btn {
@@ -863,6 +863,13 @@ body {
     text-overflow: ellipsis;
 }
 
+.history-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
 .btn:disabled {
     opacity: 0.55;
     cursor: not-allowed !important;
@@ -885,9 +892,9 @@ body {
     min-width: 150px;
 }
 
-.stat-box h4 { 
-    color: var(--text-muted); 
-    margin-bottom: 0.25rem; 
+.stat-box h4 {
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
     font-size: 0.85rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -912,18 +919,18 @@ body {
     .app-container {
         flex-direction: column;
     }
-    
+
     .sidebar {
         position: relative;
         width: 100%;
         height: auto;
         border-bottom: 1px solid var(--panel-border);
     }
-    
+
     .sidebar-header {
         padding: 1rem;
     }
-    
+
     .sidebar-nav {
         flex-direction: row;
         overflow-x: auto;
@@ -931,41 +938,41 @@ body {
         gap: 0.5rem;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .nav-link {
         flex-shrink: 0;
         padding: 0.5rem 0.75rem;
     }
-    
+
     .sidebar-footer {
         display: none;
     }
-    
+
     .main-content {
         margin-left: 0;
         padding: 0 1rem 1rem 1rem;
     }
-    
+
     .topbar {
         height: 60px;
         margin-bottom: 1rem;
     }
-    
+
     .flex-row {
         flex-direction: column;
         gap: 1rem;
     }
-    
+
     .results-controls {
         flex-direction: column;
         align-items: stretch;
         gap: 1rem;
     }
-    
+
     .upload-form {
         padding: 0 1rem 1rem 1rem;
     }
-    
+
     /* Responsive Table Card Layout */
     .premium-table thead {
         display: none;
@@ -1052,22 +1059,22 @@ body {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .nav-link span {
         display: none; /* Hide text, show only icons on very small screens */
     }
-    
+
     .nav-link {
         justify-content: center;
         width: 44px;
         height: 44px;
         padding: 0;
     }
-    
+
     .sidebar-nav {
         justify-content: space-around;
     }
-    
+
     .page-title h1 {
         font-size: 1.1rem;
     }

@@ -28,10 +28,13 @@
                     class="fa-solid fa-vial"></i> Run Comprehensive Evaluation</button>
             <button id="export-report-btn" class="btn btn-outline" disabled
                 style="flex: 1 1 min-content; background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #385038; justify-content: center;"><i
-                    class="fa-solid fa-file-export"></i> Export JSON Report</button>
+                    class="fa-solid fa-file-pdf"></i> Download PDF Report</button>
             <button id="reset-stats-btn" class="btn btn-outline"
                 style="flex: 1 1 min-content; background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #5b6d59; justify-content: center;"><i
                     class="fa-solid fa-rotate-left"></i> Reset Stats</button>
+            <button id="view-history-btn" class="btn btn-outline"
+                style="flex: 1 1 min-content; background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #385038; justify-content: center;"><i
+                    class="fa-solid fa-clock-rotate-left"></i> View Test History</button>
         </div>
     </div>
 
@@ -428,6 +431,50 @@
             <div id="environment-content" class="report-columns"></div>
         </div>
     </div>
+
+    <div id="history-section" class="hidden evaluation-report margin-top">
+        <div class="report-section">
+            <div class="section-heading">
+                <h3>Report History</h3>
+                <p class="text-muted">Review previous evaluations and download their PDF reports.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date Run</th>
+                            <th>Total Images</th>
+                            <th>Accuracy</th>
+                            <th>Macro F1</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-runs-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="history-images-container" class="hidden margin-top" style="margin-top: 30px;">
+                <div class="section-heading">
+                    <h4>Images from Run <span id="history-run-id-label"></span></h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Expected</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-images-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -503,7 +550,7 @@
         renderEnvironmental(evaluation.environmental);
 
         document.getElementById('test-results').classList.remove('hidden');
-        document.getElementById('export-report-btn').disabled = false;
+        document.getElementById('export-report-btn').disabled = !currentReport.run_id;
     }
 
     function renderConfusionMatrix(evaluation) {
@@ -704,18 +751,15 @@
     });
 
     document.getElementById('export-report-btn').addEventListener('click', () => {
-        if (!currentReport) return;
+        if (!currentReport || !currentReport.run_id) return;
 
-        const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        const url = `/api/test_runs/${currentReport.run_id}/pdf`;
         const link = document.createElement('a');
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         link.href = url;
-        link.download = `banana-model-evaluation-${timestamp}.json`;
+        link.download = `banana-model-evaluation-report-${currentReport.run_id}.pdf`;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
     });
 
     document.getElementById('run-test-btn').addEventListener('click', () => {
@@ -766,5 +810,113 @@
                 console.error(err);
             });
     });
+
+    document.getElementById('view-history-btn').addEventListener('click', () => {
+        const historySection = document.getElementById('history-section');
+        if (historySection.classList.contains('hidden')) {
+            historySection.classList.remove('hidden');
+            document.getElementById('test-results').classList.add('hidden');
+            loadTestHistory();
+        } else {
+            historySection.classList.add('hidden');
+            if (currentReport) {
+                document.getElementById('test-results').classList.remove('hidden');
+            }
+        }
+    });
+
+    function loadTestHistory() {
+        document.getElementById('history-runs-tbody').innerHTML = emptyRow(6, 'Loading history...');
+        document.getElementById('history-images-container').classList.add('hidden');
+
+        fetch('/api/test_runs')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('history-runs-tbody');
+                if (!data.runs || data.runs.length === 0) {
+                    tbody.innerHTML = emptyRow(6, 'No test runs found.');
+                    return;
+                }
+
+                tbody.innerHTML = data.runs.map(run => `
+                    <tr>
+                        <td>${run.id}</td>
+                        <td>${escapeHtml(run.date_run)}</td>
+                        <td>${run.total_images}</td>
+                        <td>${fixed(run.accuracy, 2)}%</td>
+                        <td>${fixed(run.macro_f1, 2)}%</td>
+                        <td class="history-actions">
+                            <button class="btn btn-sm btn-outline" onclick="viewStoredReport(${run.id})" ${run.report_available ? '' : 'disabled'} style="padding: 4px 8px; font-size: 12px;">View Report</button>
+                            <button class="btn btn-sm btn-outline" onclick="downloadStoredPdf(${run.id})" ${run.report_available ? '' : 'disabled'} style="padding: 4px 8px; font-size: 12px;">PDF</button>
+                            <button class="btn btn-sm btn-outline" onclick="viewTestImages(${run.id})" style="padding: 4px 8px; font-size: 12px;">Images</button>
+                        </td>
+                    </tr>
+                `).join('');
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('history-runs-tbody').innerHTML = emptyRow(6, 'Error loading history.');
+            });
+    }
+
+    window.viewStoredReport = function(runId) {
+        fetch(`/api/test_runs/${runId}/report`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                document.getElementById('history-section').classList.add('hidden');
+                renderEvaluation(data);
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error loading stored report.');
+            });
+    };
+
+    window.downloadStoredPdf = function(runId) {
+        const link = document.createElement('a');
+        link.href = `/api/test_runs/${runId}/pdf`;
+        link.download = `banana-model-evaluation-report-${runId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
+    window.viewTestImages = function(runId) {
+        document.getElementById('history-images-container').classList.remove('hidden');
+        document.getElementById('history-run-id-label').textContent = runId;
+        document.getElementById('history-images-tbody').innerHTML = emptyRow(5, 'Loading images...');
+
+        fetch(`/api/test_images/${runId}`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('history-images-tbody');
+                if (!data.images || data.images.length === 0) {
+                    tbody.innerHTML = emptyRow(5, 'No images found for this run.');
+                    return;
+                }
+
+                tbody.innerHTML = data.images.map(img => {
+                    const statusClass = img.is_correct ? 'text-green' : 'text-danger';
+                    const statusText = img.is_correct ? 'Correct' : 'Incorrect';
+
+                    return `
+                    <tr>
+                        <td>${escapeHtml(img.filename)}</td>
+                        <td>${escapeHtml(img.expected)}</td>
+                        <td>${escapeHtml(img.prediction)}</td>
+                        <td>${pct(img.confidence)}</td>
+                        <td class="${statusClass} fw-bold">${statusText}</td>
+                    </tr>
+                `}).join('');
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('history-images-tbody').innerHTML = emptyRow(5, 'Error loading images.');
+            });
+    };
 </script>
 {% endblock %}
