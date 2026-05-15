@@ -11,26 +11,26 @@
 
     <div class="test-form">
         <h3 style="margin-bottom: 15px;">Upload Test Data by Class</h3>
-        <div class="flex-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div class="test-upload-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 20px;">
             {% for cls in classes %}
-            <div class="form-group flex-1"
-                style="flex: 1; min-width: 250px; background: #fcfdfa; padding: 15px; border-radius: 8px; border: 1px solid #eef2eb;">
-                <label style="color: #2f7d32; font-size: 15px;">{{ cls }}</label>
+            <div class="form-group"
+                style="background: #fcfdfa; padding: 15px; border-radius: 8px; border: 1px solid #eef2eb; margin-bottom: 0;">
+                <label style="color: #2f7d32; font-size: 15px; word-break: break-word;">{{ cls }}</label>
                 <p class="text-xs text-muted mb-2" style="font-size: 12px; margin-bottom: 8px;">Known {{ cls }} images</p>
                 <input type="file" data-cls="{{ cls }}" multiple accept="image/*"
-                    class="premium-input file-input class-upload" style="background: white;">
+                    class="premium-input file-input class-upload" style="background: white; width: 100%;">
             </div>
             {% endfor %}
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap;">
-            <button id="run-test-btn" class="btn primary-btn flex-1" style="font-size: 16px; min-width: 260px;"><i
+            <button id="run-test-btn" class="btn primary-btn" style="flex: 1 1 260px; font-size: 16px; padding: 14px 22px; justify-content: center;"><i
                     class="fa-solid fa-vial"></i> Run Comprehensive Evaluation</button>
             <button id="export-report-btn" class="btn btn-outline" disabled
-                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #385038;"><i
+                style="flex: 1 1 min-content; background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #385038; justify-content: center;"><i
                     class="fa-solid fa-file-export"></i> Export JSON Report</button>
             <button id="reset-stats-btn" class="btn btn-outline"
-                style="background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #5b6d59;"><i
+                style="flex: 1 1 min-content; background: transparent; border: 1px solid #cbdcc8; padding: 14px 22px; border-radius: 8px; cursor: pointer; color: #5b6d59; justify-content: center;"><i
                     class="fa-solid fa-rotate-left"></i> Reset Stats</button>
         </div>
     </div>

@@ -32,6 +32,8 @@ app = Flask(__name__,
 
 # --- CONFIGURATION ---
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024 # 2 GB limit for large batch uploads
+app.config['MAX_FORM_PARTS'] = 100000 # Allow up to 100,000 files in a single request
+app.config['MAX_FORM_MEMORY_SIZE'] = 2 * 1024 * 1024 * 1024 # 2 GB limit for form memory
 MODEL_PATH = os.path.join(base_path, "banana_model.tflite")
 UPLOAD_FOLDER = os.path.join(app_dir, "uploads")
 DB_PATH = os.path.join(app_dir, "database.db")
