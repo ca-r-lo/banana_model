@@ -31,6 +31,7 @@ app = Flask(__name__,
             static_folder=os.path.join(base_path, 'static'))
 
 # --- CONFIGURATION ---
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024 # 2 GB limit for large batch uploads
 MODEL_PATH = os.path.join(base_path, "banana_model.tflite")
 UPLOAD_FOLDER = os.path.join(app_dir, "uploads")
 DB_PATH = os.path.join(app_dir, "database.db")
