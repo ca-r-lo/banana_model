@@ -400,6 +400,35 @@ def calculate_average_metrics(class_metrics):
         "balanced_accuracy": average_metric(class_metrics, "recall")
     }
 
+def calculate_cohens_kappa(matrix):
+    total = sum(sum(row) for row in matrix)
+    if total == 0:
+        return {
+            "kappa": None,
+            "observed_agreement": None,
+            "expected_agreement": None
+        }
+
+    observed_agreement = sum(matrix[index][index] for index in range(len(CLASS_NAMES))) / total
+    row_totals = [sum(row) for row in matrix]
+    column_totals = [
+        sum(matrix[row_index][column_index] for row_index in range(len(CLASS_NAMES)))
+        for column_index in range(len(CLASS_NAMES))
+    ]
+    expected_agreement = sum(
+        row_total * column_total
+        for row_total, column_total in zip(row_totals, column_totals)
+    ) / (total * total)
+
+    denominator = 1 - expected_agreement
+    kappa = None if denominator == 0 else (observed_agreement - expected_agreement) / denominator
+
+    return {
+        "kappa": kappa,
+        "observed_agreement": observed_agreement,
+        "expected_agreement": expected_agreement
+    }
+
 def bootstrap_metric_intervals(true_labels, predicted_labels, iterations=500):
     total = len(true_labels)
     if total == 0:
@@ -495,6 +524,34 @@ def average_precision_score(labels, scores):
 
     return float(sum(precisions) / positive_count)
 
+def exact_mcnemar_p_value(false_positive, false_negative):
+    discordant = false_positive + false_negative
+    if discordant == 0:
+        return None
+
+    smaller_count = min(false_positive, false_negative)
+    tail_probability = sum(
+        math.comb(discordant, count)
+        for count in range(smaller_count + 1)
+    ) / (2 ** discordant)
+    return min(1.0, 2 * tail_probability)
+
+def calculate_mcnemar_test(false_positive, false_negative):
+    discordant = false_positive + false_negative
+    statistic = None
+    if discordant > 0:
+        statistic = ((abs(false_positive - false_negative) - 1) ** 2) / discordant
+
+    return {
+        "false_positive": int(false_positive),
+        "false_negative": int(false_negative),
+        "discordant": int(discordant),
+        "statistic": statistic,
+        "p_value": exact_mcnemar_p_value(false_positive, false_negative),
+        "method": "Exact binomial p-value with continuity-corrected chi-square statistic",
+        "scope": "Healthy vs Diseased binary decision"
+    }
+
 def calculate_binary_metrics(results):
     true_positive = true_negative = false_positive = false_negative = 0
     labels = []
@@ -555,7 +612,8 @@ def calculate_binary_metrics(results):
         "f1": f1_from_precision_recall(precision, recall),
         "roc_auc": roc_auc_score(labels, disease_scores),
         "pr_auc": average_precision_score(labels, disease_scores),
-        "brier_score": brier_score
+        "brier_score": brier_score,
+        "mcnemar": calculate_mcnemar_test(false_positive, false_negative)
     }
 
 def calculate_calibration(results, bin_count=10):
@@ -904,6 +962,7 @@ def build_evaluation_summary(results):
         "overall_accuracy_ci_95": wilson_interval(correct, total),
         "confusion_matrix": matrix_as_dict(matrix),
         "confusion_matrix_rows": matrix,
+        "cohens_kappa": calculate_cohens_kappa(matrix),
         "per_class": class_metrics,
         "averages": averages,
         "bootstrap": bootstrap_metric_intervals(true_labels, predicted_labels),
@@ -987,7 +1046,25 @@ def get_report_payload(run_id):
 
     if not row or not row["report_json"]:
         return None
-    return json.loads(row["report_json"])
+    return normalize_report_payload(json.loads(row["report_json"]))
+
+def normalize_report_payload(report_payload):
+    evaluation = report_payload.get("evaluation", {})
+    binary = evaluation.get("binary", {})
+    needs_refresh = (
+        "cohens_kappa" not in evaluation
+        or "mcnemar" not in binary
+    )
+
+    if needs_refresh and report_payload.get("results"):
+        refreshed_evaluation = build_evaluation_summary(report_payload["results"])
+        return build_report_payload(
+            report_payload.get("run_id"),
+            report_payload["results"],
+            refreshed_evaluation
+        )
+
+    return report_payload
 
 def find_chrome_executable():
     candidates = [

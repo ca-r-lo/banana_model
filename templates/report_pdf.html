@@ -324,6 +324,70 @@
 
             <div class="report-section">
                 <div class="section-heading">
+                    <h3>Technical Tests Used</h3>
+                    <p class="text-muted">These are the model testing analyses that fit the labeled classification data.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="premium-table evaluation-table">
+                        <thead>
+                            <tr>
+                                <th>Test</th>
+                                <th>Result</th>
+                                <th>What It Means</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold">Confusion Matrix</td>
+                                <td>{{ evaluation.total }} images across {{ classes|length }} classes</td>
+                                <td>Shows correct predictions on the diagonal and class-to-class mistakes off the diagonal.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Accuracy</td>
+                                <td>{{ pct(evaluation.overall_accuracy) }}</td>
+                                <td>Overall percentage of labeled test images classified correctly.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Precision</td>
+                                <td>{{ pct(evaluation.averages.macro_precision) }}</td>
+                                <td>Macro precision: when the model predicts a class, how often it is correct, averaged equally across classes.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Recall</td>
+                                <td>{{ pct(evaluation.averages.macro_recall) }}</td>
+                                <td>Macro recall: how well the model finds each true class, averaged equally across classes.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">F1-score</td>
+                                <td>{{ pct(evaluation.averages.macro_f1) }}</td>
+                                <td>Macro F1: combined precision and recall score across all classes.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Cohen's Kappa</td>
+                                <td>{{ fixed(evaluation.cohens_kappa.kappa) }}</td>
+                                <td>Measures agreement between true labels and predictions after accounting for chance agreement.</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">McNemar's Test</td>
+                                <td>
+                                    {% if evaluation.binary.mcnemar.p_value is none %}
+                                    N/A ({{ evaluation.binary.mcnemar.discordant }} discordant cases)
+                                    {% else %}
+                                    p={{ fixed(evaluation.binary.mcnemar.p_value) }},
+                                    statistic={{ fixed(evaluation.binary.mcnemar.statistic) }};
+                                    FP={{ evaluation.binary.mcnemar.false_positive }},
+                                    FN={{ evaluation.binary.mcnemar.false_negative }}
+                                    {% endif %}
+                                </td>
+                                <td>Applied to Healthy vs Diseased decisions; checks whether false positives and false negatives are imbalanced.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="section-heading">
                     <h3>Multi-Class Confusion Matrix</h3>
                     <p class="text-muted">Rows are actual labels; columns are model predictions.</p>
                 </div>

@@ -112,6 +112,25 @@
 
         <div class="report-section">
             <div class="section-heading">
+                <h3>Technical Tests Used</h3>
+                <p class="text-muted">These are the model testing analyses that fit the labeled classification data.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="premium-table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Test</th>
+                            <th>Result</th>
+                            <th>What It Means</th>
+                        </tr>
+                    </thead>
+                    <tbody id="technical-tests-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-heading">
                 <h3>Multi-Class Confusion Matrix</h3>
                 <p class="text-muted">Rows are actual labels; columns are model predictions.</p>
             </div>
@@ -541,6 +560,7 @@
         setText('report-ece', pct(evaluation.calibration.expected_calibration_error));
 
         renderConfusionMatrix(evaluation);
+        renderTechnicalTests(evaluation);
         renderPerClass(evaluation.per_class);
         renderAverages(evaluation.averages);
         renderBinaryMetrics(evaluation.binary);
@@ -572,6 +592,59 @@
             tbody += '</tr>';
         });
         document.getElementById('mc-tbody').innerHTML = tbody;
+    }
+
+    function renderTechnicalTests(evaluation) {
+        const mcnemar = evaluation.binary.mcnemar;
+        const mcnemarResult = mcnemar.p_value === null || mcnemar.p_value === undefined
+            ? `N/A (${mcnemar.discordant} discordant cases)`
+            : `p=${fixed(mcnemar.p_value)}, statistic=${fixed(mcnemar.statistic)}; FP=${mcnemar.false_positive}, FN=${mcnemar.false_negative}`;
+
+        const rows = [
+            {
+                test: 'Confusion Matrix',
+                result: `${evaluation.total} images across ${classesList.length} classes`,
+                meaning: 'Shows correct predictions on the diagonal and class-to-class mistakes off the diagonal.'
+            },
+            {
+                test: 'Accuracy',
+                result: pct(evaluation.overall_accuracy),
+                meaning: 'Overall percentage of labeled test images classified correctly.'
+            },
+            {
+                test: 'Precision',
+                result: pct(evaluation.averages.macro_precision),
+                meaning: 'Macro precision: when the model predicts a class, how often it is correct, averaged equally across classes.'
+            },
+            {
+                test: 'Recall',
+                result: pct(evaluation.averages.macro_recall),
+                meaning: 'Macro recall: how well the model finds each true class, averaged equally across classes.'
+            },
+            {
+                test: 'F1-score',
+                result: pct(evaluation.averages.macro_f1),
+                meaning: 'Macro F1: combined precision and recall score across all classes.'
+            },
+            {
+                test: "Cohen's Kappa",
+                result: fixed(evaluation.cohens_kappa.kappa),
+                meaning: 'Measures agreement between true labels and predictions after accounting for chance agreement.'
+            },
+            {
+                test: "McNemar's Test",
+                result: mcnemarResult,
+                meaning: 'Applied to Healthy vs Diseased decisions; checks whether false positives and false negatives are imbalanced.'
+            }
+        ];
+
+        document.getElementById('technical-tests-tbody').innerHTML = rows.map(row => `
+            <tr>
+                <td class="fw-bold">${escapeHtml(row.test)}</td>
+                <td>${escapeHtml(row.result)}</td>
+                <td>${escapeHtml(row.meaning)}</td>
+            </tr>
+        `).join('');
     }
 
     function renderPerClass(rows) {
